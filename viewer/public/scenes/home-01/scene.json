@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "scene_id": "home-01",
+  "title": "VYTRIX Reconstructed Space",
+  "units": "metres",
+  "up_axis": "+Y",
+  "handedness": "right",
+  "splat": {
+    "file": "scene.ksplat",
+    "format": "ksplat",
+    "num_gaussians": 350000,
+    "bytes": 18500000
+  },
+  "transform_applied": {
+    "matrix": [
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0
+    ],
+    "scale_method": "two_point_tape",
+    "scale_error_pct": 1.1
+  },
+  "bounds": {
+    "min": [-4.5, 0.0, -5.0],
+    "max": [4.5, 2.8, 5.0]
+  },
+  "spawn": {
+    "position": [0.0, 0.0, 0.0],
+    "yaw_deg": 0
+  },
+  "eye_height_m": 1.6,
+  "capture": {
+    "device": "Smartphone (Wide Camera, 4K/1080p 30fps)",
+    "date": "2026-10-10",
+    "fps": 30,
+    "num_frames_used": 350
+  },
+  "metrics": {
+    "registered_images": 344,
+    "total_images": 350,
+    "reproj_error_px": 0.68,
+    "psnr": 30.2,
+    "ssim": 0.924
+  },
+  "collision_proxy": null,
+  "navmesh": null,
+  "pois": [],
+  "credits": [
+    "VYTRO SQUAD (Team)",
+    "Techfest 2026-27, IIT Bombay (Namma Space)",
+    "gsplat & nerfstudio (Apache-2.0)",
+    "Three.js & @mkkellogg/gaussian-splats-3d (MIT)"
+  ]
+}

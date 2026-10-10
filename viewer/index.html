@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VYTRIX — Spatial 3D Digital Twin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-color: #08090c;
+        --accent-cyan: #00f0ff;
+        --accent-blue: #3b82f6;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --panel-bg: rgba(15, 23, 42, 0.75);
+        --panel-border: rgba(255, 255, 255, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+      }
+
+      body, html {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: var(--bg-color);
+        font-family: 'Outfit', sans-serif;
+        color: var(--text-primary);
+      }
+
+      #webgl-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        z-index: 1;
+      }
+
+      /* Crosshair */
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 10px;
+        height: 10px;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 10;
+        opacity: 0.8;
+      }
+      #crosshair::before, #crosshair::after {
+        content: '';
+        position: absolute;
+        background-color: var(--accent-cyan);
+      }
+      #crosshair::before {
+        top: 4px;
+        left: 0;
+        width: 10px;
+        height: 2px;
+      }
+      #crosshair::after {
+        top: 0;
+        left: 4px;
+        width: 2px;
+        height: 10px;
+      }
+
+      /* HUD Top Left */
+      #hud-telemetry {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 10;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        padding: 12px 16px;
+        backdrop-filter: blur(12px);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        pointer-events: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      }
+      .hud-title {
+        color: var(--accent-cyan);
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .hud-metric {
+        color: var(--text-secondary);
+      }
+      .hud-val {
+        color: #ffffff;
+        font-weight: 600;
+      }
+
+      /* Controls Hint Bottom Center */
+      #hud-controls {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        padding: 8px 24px;
+        backdrop-filter: blur(12px);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        display: flex;
+        gap: 20px;
+        pointer-events: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      }
+      .key-pill {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.12);
+        padding: 2px 7px;
+        border-radius: 4px;
+        color: var(--accent-cyan);
+        font-weight: 600;
+      }
+
+      /* Lock Overlay (Click to explore) */
+      #click-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 20;
+        background: rgba(8, 9, 12, 0.7);
+        backdrop-filter: blur(6px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+      }
+      #click-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .overlay-card {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(0, 240, 255, 0.3);
+        border-radius: 16px;
+        padding: 40px 50px;
+        text-align: center;
+        max-width: 480px;
+        box-shadow: 0 0 50px rgba(0, 240, 255, 0.15);
+      }
+      .overlay-badge {
+        display: inline-block;
+        background: rgba(0, 240, 255, 0.15);
+        color: var(--accent-cyan);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(0, 240, 255, 0.3);
+      }
+      .overlay-title {
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, #ffffff, var(--accent-cyan));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .overlay-sub {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-bottom: 28px;
+      }
+      .start-btn {
+        background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+        border: none;
+        color: #08090c;
+        font-family: 'Outfit', sans-serif;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 12px 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        box-shadow: 0 0 25px rgba(0, 240, 255, 0.35);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .start-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 35px rgba(0, 240, 255, 0.5);
+      }
+
+      /* Loading Screen */
+      #loading-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 30;
+        background: #08090c;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: opacity 0.5s ease;
+      }
+      #loading-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .progress-container {
+        width: 320px;
+        margin-top: 24px;
+      }
+      .progress-bar-bg {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+        transition: width 0.15s ease-out;
+      }
+      .progress-stats {
+        display: flex;
+        justify-content: space-between;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Crosshair -->
+    <div id="crosshair"></div>
+
+    <!-- HUD Telemetry -->
+    <div id="hud-telemetry">
+      <div class="hud-title">
+        <span>VYTRIX</span>
+        <span style="font-size: 10px; background: rgba(0,240,255,0.2); color: #00f0ff; padding: 1px 6px; border-radius: 4px;">NAMMA SPACE</span>
+      </div>
+      <div class="hud-metric">FPS: <span id="hud-fps" class="hud-val">--</span> (<span id="hud-frame-time">--</span> ms)</div>
+      <div class="hud-metric">POS: <span id="hud-pos" class="hud-val">[0.0, 1.6, 0.0]</span></div>
+      <div class="hud-metric">MODE: <span id="hud-mode" class="hud-val">WALK (1.6m)</span></div>
+      <div class="hud-metric">SPLAT: <span id="hud-splats" class="hud-val">0</span></div>
+    </div>
+
+    <!-- Controls Legend -->
+    <div id="hud-controls">
+      <div><span class="key-pill">W</span><span class="key-pill">A</span><span class="key-pill">S</span><span class="key-pill">D</span> Move</div>
+      <div><span class="key-pill">Shift</span> Run</div>
+      <div><span class="key-pill">F</span> Fly Mode</div>
+      <div><span class="key-pill">R</span> Reset</div>
+      <div><span class="key-pill">Esc</span> Release Mouse</div>
+    </div>
+
+    <!-- Click To Enter Overlay -->
+    <div id="click-overlay">
+      <div class="overlay-card">
+        <div class="overlay-badge">TECHFEST 2026-27 IIT BOMBAY</div>
+        <h1 class="overlay-title">VYTRIX</h1>
+        <p class="overlay-sub">Interactive 3D Digital Twin & Free-Roaming Engine<br>Team: VYTRO SQUAD</p>
+        <button id="enter-btn" class="start-btn">CLICK TO EXPLORE</button>
+      </div>
+    </div>
+
+    <!-- Progressive Streamed Loading Screen -->
+    <div id="loading-screen">
+      <h2 style="font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 6px;">Loading Digital Twin</h2>
+      <p id="loading-status" style="color: var(--text-secondary); font-size: 14px;">Initializing WebGL2 & Spatials...</p>
+      <div class="progress-container">
+        <div class="progress-bar-bg">
+          <div id="progress-fill" class="progress-bar-fill"></div>
+        </div>
+        <div class="progress-stats">
+          <span id="progress-percent">0%</span>
+          <span id="progress-bytes">Streaming assets...</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
