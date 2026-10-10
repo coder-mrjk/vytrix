@@ -22,13 +22,18 @@ async function init() {
 
   const enterApp = () => {
     controls.lock();
+    if ("ontouchstart" in window || navigator.maxTouchPoints > 0) {
+      if (clickOverlay) clickOverlay.classList.add("hidden");
+    }
   };
 
   if (clickOverlay) {
     clickOverlay.addEventListener("click", enterApp);
+    clickOverlay.addEventListener("touchstart", enterApp);
   }
   if (enterBtn) {
     enterBtn.addEventListener("click", enterApp);
+    enterBtn.addEventListener("touchstart", enterApp);
   }
 
   eventBus.on("pointerlock:change", (isLocked: any) => {

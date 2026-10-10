@@ -32,6 +32,13 @@ export class FirstPersonControls {
   private runMultiplier: number = 2.2;
   private mouseSensitivity: number = 0.0022;
 
+  // Touch tracking for mobile devices
+  private touchMoveId: number | null = null;
+  private touchMoveStart: { x: number; y: number } = { x: 0, y: 0 };
+  private touchLookId: number | null = null;
+  private touchLookLast: { x: number; y: number } = { x: 0, y: 0 };
+  private isTouchDevice: boolean = false;
+
   constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
     this.camera = camera;
     this.domElement = domElement;
@@ -109,6 +116,64 @@ export class FirstPersonControls {
     window.addEventListener("keyup", (e: KeyboardEvent) => {
       this.onKeyUp(e);
     });
+
+    // Touch event support for smartphones and tablets
+    window.addEventListener("touchstart", (e: TouchEvent) => {
+      this.isTouchDevice = true;
+      const width = window.innerWidth;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.clientX < width / 2 && this.touchMoveId === null) {
+          this.touchMoveId = t.identifier;
+          this.touchMoveStart = { x: t.clientX, y: t.clientY };
+        } else if (t.clientX >= width / 2 && this.touchLookId === null) {
+          this.touchLookId = t.identifier;
+          this.touchLookLast = { x: t.clientX, y: t.clientY };
+        }
+      }
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (e: TouchEvent) => {
+      const deadzone = 12;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier === this.touchMoveId) {
+          const dx = t.clientX - this.touchMoveStart.x;
+          const dy = t.clientY - this.touchMoveStart.y;
+          this.moveForward = dy < -deadzone;
+          this.moveBackward = dy > deadzone;
+          this.moveRight = dx > deadzone;
+          this.moveLeft = dx < -deadzone;
+        } else if (t.identifier === this.touchLookId) {
+          const dx = t.clientX - this.touchLookLast.x;
+          const dy = t.clientY - this.touchLookLast.y;
+          this.yaw -= dx * this.mouseSensitivity * 1.5;
+          this.pitch -= dy * this.mouseSensitivity * 1.5;
+          const maxPitch = (85 * Math.PI) / 180;
+          this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch));
+          this.touchLookLast = { x: t.clientX, y: t.clientY };
+          this.updateCameraRotation();
+        }
+      }
+    }, { passive: true });
+
+    const endTouch = (e: TouchEvent) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier === this.touchMoveId) {
+          this.touchMoveId = null;
+          this.moveForward = false;
+          this.moveBackward = false;
+          this.moveLeft = false;
+          this.moveRight = false;
+        } else if (t.identifier === this.touchLookId) {
+          this.touchLookId = null;
+        }
+      }
+    };
+
+    window.addEventListener("touchend", endTouch);
+    window.addEventListener("touchcancel", endTouch);
   }
 
   private onKeyDown(e: KeyboardEvent): void {
@@ -191,7 +256,7 @@ export class FirstPersonControls {
   }
 
   public update(deltaTime: number): void {
-    if (!this.isLocked) return;
+    if (!this.isLocked && !this.isTouchDevice) return;
 
     // Cap delta time to avoid large jumps if tab was blurred
     const dt = Math.min(deltaTime, 0.1);
