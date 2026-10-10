@@ -123,38 +123,66 @@ export class SceneManager {
   }
 
   private async tryLoadSplat(splatUrl: string, loading: LoadingOverlay): Promise<boolean> {
-    const headCheck = await fetch(splatUrl, { method: "HEAD" });
-    if (!headCheck.ok) return false;
-
-    loading.setProgress(55, "Streaming 3D Gaussian Splats...", splatUrl);
-
-    // Initialize GaussianSplats3D Viewer
-    this.splatViewer = new GaussianSplats3D.Viewer({
-      threeScene: this.scene,
-      camera: this.camera,
-      renderer: this.renderer,
-      useBuiltInControls: false, // We use custom FirstPersonControls
-      selfDrivenMode: false,
-      progressiveLoad: true
-    });
-
-    await this.splatViewer.addSplatScene(splatUrl, {
-      splatAlphaRemovalThreshold: 5,
-      showLoadingUI: false,
-      position: [0, 0, 0],
-      rotation: [0, 0, 0, 1],
-      scale: [1, 1, 1],
-      onProgress: (percent: number, percentLabel: string) => {
-        loading.setProgress(
-          55 + (percent * 0.4),
-          `Streaming 3D Gaussians (${percentLabel})`,
-          splatUrl
-        );
+    try {
+      const headCheck = await fetch(splatUrl, { method: "HEAD" });
+      if (!headCheck.ok) return false;
+      const contentType = headCheck.headers.get("content-type");
+      if (contentType && contentType.includes("text/html")) {
+        console.warn("Splat URL returned HTML instead of binary:", splatUrl);
+        return false;
       }
-    });
 
-    eventBus.emit("splats:loaded", this.manifest?.splat.num_gaussians || 250000);
-    return true;
+      loading.setProgress(55, "Streaming 3D Gaussian Splats...", splatUrl);
+
+      // On non-localhost HTTP connections, SharedArrayBuffer is disabled by browsers
+      const canUseSharedMemory = window.isSecureContext && typeof SharedArrayBuffer !== "undefined";
+
+      this.splatViewer = new GaussianSplats3D.Viewer({
+        threeScene: this.scene,
+        camera: this.camera,
+        renderer: this.renderer,
+        useBuiltInControls: false,
+        selfDrivenMode: false,
+        progressiveLoad: canUseSharedMemory,
+        sharedMemoryForWorkers: canUseSharedMemory,
+        gpuAcceleratedSort: true
+      });
+
+      const loadPromise = this.splatViewer.addSplatScene(splatUrl, {
+        splatAlphaRemovalThreshold: 5,
+        showLoadingUI: false,
+        position: [0, 0, 0],
+        rotation: [0, 0, 0, 1],
+        scale: [1, 1, 1],
+        onProgress: (percent: number, percentLabel: string) => {
+          loading.setProgress(
+            55 + (percent * 0.4),
+            `Streaming 3D Gaussians (${percentLabel})`,
+            splatUrl
+          );
+        }
+      });
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout loading splat scene after 4s")), 4000);
+      });
+
+      await Promise.race([loadPromise, timeoutPromise]);
+
+      eventBus.emit("splats:loaded", this.manifest?.splat.num_gaussians || 250000);
+      return true;
+    } catch (err) {
+      console.warn("Failed or timed out loading 3D Gaussian Splat scene. Falling back to procedural room:", err);
+      if (this.splatViewer) {
+        try {
+          this.splatViewer.dispose();
+        } catch {
+          // Ignore disposal errors
+        }
+        this.splatViewer = null;
+      }
+      return false;
+    }
   }
 
   private buildProceduralRoom(bounds: { min: [number, number, number]; max: [number, number, number] }): void {

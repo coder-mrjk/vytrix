@@ -6,10 +6,10 @@
   "up_axis": "+Y",
   "handedness": "right",
   "splat": {
-    "file": "scene.ksplat",
-    "format": "ksplat",
-    "num_gaussians": 350000,
-    "bytes": 18500000
+    "file": "scene.splat",
+    "format": "splat",
+    "num_gaussians": 6680,
+    "bytes": 213760
   },
   "transform_applied": {
     "matrix": [
