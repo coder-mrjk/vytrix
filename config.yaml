@@ -1,0 +1,59 @@
+# VYTRIX Configuration: Namma Space Pipeline (Round 1)
+scene:
+  id: "home-01"
+  title: "VYTRIX Reconstructed Space"
+  units: "metres"
+  up_axis: "+Y"
+  handedness: "right"
+  eye_height_m: 1.6
+
+capture:
+  device: "Smartphone (Wide Camera, 4K/1080p 30fps)"
+  fps: 30
+  scale_reference_type: "measured_distance" # tape on floor or door height
+  scale_reference_meters: 1.00 # Real-world measured distance in metres
+
+preprocess:
+  target_frames: 350
+  blur_threshold_variance: 100.0 # Frames below this Laplacian variance are discarded
+  downscale_factor: 1 # 1 = original resolution, 2 = half-res for faster SfM
+  min_frame_interval: 2
+
+sfm:
+  matcher: "sequential" # Suited for continuous video trajectories
+  overlap_window: 20
+  loop_detection: true
+  camera_model: "SIMPLE_RADIAL" # Robust for smartphone video with unknown focal lengths
+  min_registered_ratio: 0.70 # Warn or abort if <70% frames register
+
+training:
+  iterations: 15000 # Default for Colab T4 (approx 15-25 minutes)
+  sh_degree: 3
+  densify_until_iter: 10000
+  densify_from_iter: 500
+  densification_interval: 100
+  opacity_reset_interval: 3000
+  checkpoint_interval: 5000
+  colab_drive_checkpoint_dir: "/content/drive/MyDrive/VYTRIX_Checkpoints"
+
+normalization:
+  floor_ransac:
+    distance_threshold: 0.03 # 3 cm RANSAC plane tolerance
+    max_iterations: 2000
+    expected_normal: [0.0, 1.0, 0.0]
+  outlier_removal:
+    percentile_low: 0.01 # Cut floaters below 1st percentile
+    percentile_high: 0.99 # Cut floaters above 99th percentile
+
+compression:
+  prune_opacity_threshold: 0.05
+  export_format: "ksplat" # Highly compressed progressive format for @mkkellogg/gaussian-splats-3d
+  compression_level: 1
+
+viewer:
+  walk_speed_m_per_s: 1.4
+  run_multiplier: 2.2
+  mouse_sensitivity: 0.002
+  fov_degrees: 75
+  fly_mode_toggle_key: "f"
+  fps_hud_default: true
