@@ -26,6 +26,7 @@ yarn-error.log*
 *.mkv
 *.ply
 *.splat
+!viewer/public/scenes/**/scene.splat
 *.ksplat
 *.spz
 *.tar.gz
