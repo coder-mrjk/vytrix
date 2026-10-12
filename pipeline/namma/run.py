@@ -8,6 +8,8 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
+
 from namma.config import load_config
 from namma.normalize import normalize_scene
 from namma.optimize import compress_and_optimize_splat
