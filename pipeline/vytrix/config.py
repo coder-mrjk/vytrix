@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
 logger = logging.getLogger(__name__)
 
 
-def load_config(config_path: str | Path = "config.yaml") -> Dict[str, Any]:
+def load_config(config_path: str | Path = "config.yaml") -> dict[str, Any]:
     """Load and validate pipeline configuration YAML file.
 
     Args:
@@ -29,7 +29,7 @@ def load_config(config_path: str | Path = "config.yaml") -> Dict[str, Any]:
         raise FileNotFoundError(f"Configuration file not found: {path.resolve()}")
 
     with open(path, "r", encoding="utf-8") as f:
-        config: Dict[str, Any] = yaml.safe_load(f) or {}
+        config: dict[str, Any] = yaml.safe_load(f) or {}
 
     required_sections = ["scene", "capture", "preprocess", "sfm", "training", "normalization"]
     missing = [sec for sec in required_sections if sec not in config]

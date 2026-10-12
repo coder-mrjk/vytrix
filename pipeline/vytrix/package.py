@@ -7,16 +7,16 @@ import logging
 import shutil
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 def package_scene(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     stage_dir: str | Path,
     viewer_scenes_dir: str | Path = "viewer/public/scenes",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Package the reconstructed splat model and canonical scene.json for the web viewer.
 
     Args:
@@ -62,7 +62,7 @@ def package_scene(
         shutil.copy2(source_ksplat, dest_ksplat)
 
     # Build canonical scene.json manifest
-    scene_manifest: Dict[str, Any] = {
+    scene_manifest: dict[str, Any] = {
         "schema_version": "1.0",
         "scene_id": scene_id,
         "title": scene_cfg.get("title", "VYTRIX Reconstructed Space"),
@@ -116,7 +116,7 @@ def package_scene(
         "pois": [],
         "credits": [
             "VYTRO SQUAD (Team)",
-            "Techfest 2026-27, IIT Bombay (Namma Space)",
+            "Techfest 2026-27, IIT Bombay",
             "gsplat & nerfstudio (Apache-2.0)",
             "Three.js & @mkkellogg/gaussian-splats-3d (MIT)",
         ],

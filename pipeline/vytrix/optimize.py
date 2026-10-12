@@ -5,11 +5,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shutil
 import struct
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ def compress_and_optimize_splat(
     output_dir: str | Path,
     opacity_threshold: float = 0.05,
     export_format: str = "ksplat",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Prune low-opacity floaters and compress splat into web-optimized binary format.
 
     Args:

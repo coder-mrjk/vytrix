@@ -1,6 +1,6 @@
 # VYTRIX Standard Operating Procedure (SOP): Indoor Spatial Capture
 
-**Project:** VYTRIX (Namma Space — Techfest 2026-27, IIT Bombay)  
+**Project:** VYTRIX (Techfest 2026-27, IIT Bombay)  
 **Target:** Non-technical operators capturing indoor environments with a smartphone for high-fidelity 3D Gaussian Splatting and metric digital twins.
 
 ---

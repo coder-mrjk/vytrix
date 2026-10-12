@@ -7,7 +7,7 @@ import logging
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def run_colmap_sfm(
     overlap_window: int = 20,
     loop_detection: bool = True,
     min_registered_ratio: float = 0.70,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Execute COLMAP feature extraction, sequential matching, and sparse reconstruction.
 
     Args:

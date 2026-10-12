@@ -2,7 +2,7 @@
 
 **Project:** VYTRIX  
 **Team:** VYTRO SQUAD  
-**Competition:** Techfest 2026-27, IIT Bombay (Namma Space — Round 1)  
+**Competition:** Techfest 2026-27, IIT Bombay (Round 1)  
 **GitHub Repository:** [https://github.com/coder-mrjk/vytrix.git](https://github.com/coder-mrjk/vytrix.git) (Branch: `main`)  
 **Date of Migration:** 10 October 2026  
 
@@ -19,9 +19,9 @@ Everything built on the Windows PC is safely committed and synced to GitHub:
   - Network host enabled (`0.0.0.0:3000`) for access across devices on local Wi-Fi.
   - Fail-safe loader with SharedArrayBuffer auto-fallback and procedural room backup.
   - Sample 3D Gaussian Splat scene (`scene.splat`, 6,680 Gaussians) verified and committed.
-- **6-Stage Reconstruction Pipeline (`pipeline/namma/`):**
+- **6-Stage Reconstruction Pipeline (`pipeline/vytrix/`):**
   - Preprocess (blur filter), SfM (COLMAP), Train (3DGS gsplat), Normalize (RANSAC floor, +Y up, metric scale), Optimize (.ksplat), Package (scene.json).
-  - Google Colab Driver Notebook: `pipeline/namma_space_pipeline.ipynb` (GPU T4 + Drive sync).
+  - Google Colab Driver Notebook: `pipeline/vytrix_pipeline.ipynb` (GPU T4 + Drive sync).
 - **Quality Gates:**
   - `npm run build` passed in 2.3s with 0 errors.
   - `pytest test/test_normalization.py -v` passed (4/4 tests).
@@ -69,6 +69,6 @@ Open `http://localhost:3000` in Safari, Chrome, or Edge on your Mac. You can als
 3. Open the cloned folder `/path/to/vytrix` as your active workspace.
 4. In the Antigravity chat, paste this prompt:
 
-> *"Hi Antigravity! I have switched from my Windows PC to my MacBook. I am working on VYTRIX for Team VYTRO SQUAD (Techfest 2026-27, IIT Bombay - Namma Space Round 1). Please read `AGENTS.md`, `SPEC.md`, and `docs/SESSION_HANDOFF.md` to see what has been built and what we are doing next."*
+> *"Hi Antigravity! I have switched from my Windows PC to my MacBook. I am working on VYTRIX for Team VYTRO SQUAD (Techfest 2026-27, IIT Bombay - Round 1). Please read `AGENTS.md`, `SPEC.md`, and `docs/SESSION_HANDOFF.md` to see what has been built and what we are doing next."*
 
 The agent on your Mac will immediately read the handoff file, recognize all architectural decisions, understand the full codebase, and continue right where we left off!

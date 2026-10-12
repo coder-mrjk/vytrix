@@ -1,0 +1,21 @@
+{
+  "device": "Smartphone (Wide Camera, 4K 30fps)",
+  "capture_date": "2026-10-10",
+  "fps": 30,
+  "resolution": [3840, 2160],
+  "fov_degrees": 78.0,
+  "lens": "1x Wide (26mm equivalent)",
+  "exposure_mode": "Locked (AE/AF Lock engaged)",
+  "scale_reference": {
+    "type": "measured_floor_tape",
+    "distance_meters": 1.00,
+    "tape_points_sfm": [
+      [-0.50, 0.02, 0.20],
+      [0.50, 0.02, 0.20]
+    ]
+  },
+  "sample_room": {
+    "type": "Living Room & Entryway",
+    "estimated_dimensions_m": [7.0, 2.6, 8.0]
+  }
+}

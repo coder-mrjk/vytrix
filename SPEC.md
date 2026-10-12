@@ -2,7 +2,7 @@
 
 **Project:** VYTRIX (Intelligent Spatial Computing Engine)  
 **Team:** VYTRO SQUAD  
-**Challenge:** Namma Space (Techfest 2026-27, IIT Bombay)  
+**Challenge:** Techfest 2026-27, IIT Bombay (Round 1)  
 **Track:** Digital Twins, Spatial Computing, and Indoor Navigation  
 **Repository:** [https://github.com/coder-mrjk/vytrix.git](https://github.com/coder-mrjk/vytrix.git)  
 
@@ -179,7 +179,7 @@ $$\mathbf{p}_{\text{canonical}} = \mathbf{R} (s_{\text{metric}} \cdot \mathbf{p}
   "pois": [],
   "credits": [
     "VYTRO SQUAD (Team)",
-    "Techfest 2026-27, IIT Bombay (Namma Space)",
+    "Techfest 2026-27, IIT Bombay",
     "gsplat & nerfstudio (Apache-2.0)",
     "Three.js & @mkkellogg/gaussian-splats-3d (MIT)"
   ]
@@ -233,10 +233,10 @@ Per `AGENTS.md` Rule 1: **One milestone at a time. Do not proceed to the next mi
 
 - **Milestone 1: Specification & Core Pipeline Integrity**
   - Create root `SPEC.md`.
-  - Fix pipeline imports (`import numpy as np` in `pipeline/namma/run.py`).
+  - Fix pipeline imports (`import numpy as np` in `pipeline/vytrix/run.py`).
   - Configure Python virtual environment on macOS and verify 4/4 unit tests.
 - **Milestone 2: Cloud Reconstruction Infrastructure**
-  - Implement reproducible Google Colab driver notebook (`pipeline/namma_space_pipeline.ipynb`).
+  - Implement reproducible Google Colab driver notebook (`pipeline/vytrix_pipeline.ipynb`).
 - **Milestone 3: Sample Data Package & Splat Assets**
   - Provide sample dataset in `test/data/`.
   - Provide initial 3D Gaussian Splat model in `viewer/public/scenes/home-01/scene.splat`.

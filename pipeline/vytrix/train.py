@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def train_gaussian_splat(
     iterations: int = 15000,
     sh_degree: int = 3,
     drive_checkpoint_dir: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Train 3D Gaussian Splatting model on GPU and checkpoint to Google Drive.
 
     Args:

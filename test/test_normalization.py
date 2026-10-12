@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
-
-from namma.normalize import (
+from vytrix.normalize import (
     compute_rotation_matrix_to_vector,
     fit_plane_ransac,
     normalize_scene,
@@ -74,7 +72,7 @@ def test_normalize_scene_canonical_leveling():
     tilt_angle = np.radians(15.0)
     pts[:, 1] = pts[:, 2] * np.tan(tilt_angle) + 1.2  # Floor height at 1.2
 
-    transformed, matrix, meta = normalize_scene(pts, scale_factor=2.0, distance_threshold=0.05)
+    transformed, _matrix, meta = normalize_scene(pts, scale_factor=2.0, distance_threshold=0.05)
 
     # In transformed space, floor median Y must be approx 0.0
     floor_median_y = np.median(transformed[:, 1])

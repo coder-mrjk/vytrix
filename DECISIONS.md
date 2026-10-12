@@ -2,7 +2,7 @@
 
 Project: **VYTRIX**  
 Team: **VYTRO SQUAD**  
-Competition: **Techfest 2026-27, IIT Bombay (Namma Space)**
+Competition: **Techfest 2026-27, IIT Bombay (Round 1)**
 
 ---
 

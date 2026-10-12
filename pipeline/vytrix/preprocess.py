@@ -6,7 +6,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import cv2
 import numpy as np
@@ -35,7 +35,7 @@ def extract_frames(
     target_frames: int = 350,
     blur_threshold: float = 100.0,
     downscale_factor: int = 1,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Extract, filter, and save sharp frames from an input video file.
 
     Args:
@@ -80,7 +80,7 @@ def extract_frames(
     frame_idx = 0
     saved_count = 0
     rejected_count = 0
-    frame_scores: List[Tuple[str, float]] = []
+    frame_scores: list[tuple[str, float]] = []
 
     while True:
         ret, frame = cap.read()

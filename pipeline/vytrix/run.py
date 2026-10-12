@@ -10,20 +10,20 @@ from pathlib import Path
 
 import numpy as np
 
-from namma.config import load_config
-from namma.normalize import normalize_scene
-from namma.optimize import compress_and_optimize_splat
-from namma.package import package_scene
-from namma.preprocess import extract_frames
-from namma.sfm import run_colmap_sfm
-from namma.train import train_gaussian_splat
+from vytrix.config import load_config
+from vytrix.normalize import normalize_scene
+from vytrix.optimize import compress_and_optimize_splat
+from vytrix.package import package_scene
+from vytrix.preprocess import extract_frames
+from vytrix.sfm import run_colmap_sfm
+from vytrix.train import train_gaussian_splat
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("namma.run")
+logger = logging.getLogger("vytrix.run")
 
 
 def run_pipeline(
@@ -115,7 +115,7 @@ def run_pipeline(
         np.random.seed(42)
         sample_pts = np.random.uniform(-3, 3, size=(1000, 3))
         sample_pts[:, 1] = 0.0 + np.random.normal(0, 0.02, size=1000)  # Floor points
-        transformed_pts, matrix, meta = normalize_scene(sample_pts, scale_factor=1.0)
+        _transformed_pts, _matrix, meta = normalize_scene(sample_pts, scale_factor=1.0)
         with open(manifest4, "w", encoding="utf-8") as f:
             import json
 
@@ -165,8 +165,8 @@ def main() -> None:
             work_dir=args.work_dir,
             force=args.force,
         )
-    except Exception as e:
-        logger.error("Pipeline failed with error: %s", e, exc_info=True)
+    except Exception:
+        logger.exception("Pipeline execution failed")
         sys.exit(1)
 
 

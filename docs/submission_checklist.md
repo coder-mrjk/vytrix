@@ -1,6 +1,6 @@
 # Round 1 Submission Verification Checklist
 
-**Competition:** Techfest 2026-27, IIT Bombay (Namma Space)  
+**Competition:** Techfest 2026-27, IIT Bombay (Round 1)  
 **Team:** VYTRO SQUAD  
 **App:** VYTRIX  
 **Round 1 Deadline:** 31 October 2026 (Target: 28 October 2026)  
@@ -34,7 +34,7 @@
 ### Item 4: Code Repository & Setup Instructions
 - [ ] Public GitHub repository link: [https://github.com/coder-mrjk/vytrix.git](https://github.com/coder-mrjk/vytrix.git).
 - [ ] Root `README.md` with complete reproduction instructions for judges.
-- [ ] "Open in Colab" badge directly launching `pipeline/namma_space_pipeline.ipynb`.
+- [ ] "Open in Colab" badge directly launching `pipeline/vytrix_pipeline.ipynb`.
 - [ ] `test/` sample data present and verified reproducible on a fresh runtime.
 
 ### Item 5: Master PDF (`Additional_Links_and_Prototypes.pdf`)

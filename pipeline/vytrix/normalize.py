@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import logging
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -16,7 +14,7 @@ def fit_plane_ransac(
     points: np.ndarray,
     distance_threshold: float = 0.03,
     max_iterations: int = 2000,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Fit a dominant 3D plane using RANSAC.
 
     Args:
@@ -76,7 +74,7 @@ def fit_plane_ransac(
 
 def compute_rotation_matrix_to_vector(
     source_vector: np.ndarray,
-    target_vector: np.ndarray = np.array([0.0, 1.0, 0.0]),
+    target_vector: np.ndarray | None = None,
 ) -> np.ndarray:
     """Compute 3x3 rotation matrix that rotates source_vector onto target_vector.
 
@@ -89,6 +87,8 @@ def compute_rotation_matrix_to_vector(
     Returns:
         3x3 orthogonal rotation matrix R.
     """
+    if target_vector is None:
+        target_vector = np.array([0.0, 1.0, 0.0])
     v_src = source_vector / np.linalg.norm(source_vector)
     v_tgt = target_vector / np.linalg.norm(target_vector)
 
@@ -117,7 +117,7 @@ def normalize_scene(
     points: np.ndarray,
     scale_factor: float = 1.0,
     distance_threshold: float = 0.03,
-) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Normalize 3D points into canonical coordinate frame:
 
     - Gravity aligned (+Y = up).
@@ -139,7 +139,6 @@ def normalize_scene(
     # 2. Fit ground plane via RANSAC
     plane, inliers = fit_plane_ransac(scaled_points, distance_threshold=distance_threshold)
     normal = plane[:3]
-    d = plane[3]
 
     # 3. Rotate normal to [0, 1, 0]
     r_mat = compute_rotation_matrix_to_vector(normal, np.array([0.0, 1.0, 0.0]))

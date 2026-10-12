@@ -1,12 +1,12 @@
 # VYTRIX: Intelligent Spatial Engine & Photorealistic 3D Digital Twin
 
-[![Techfest IIT Bombay](https://img.shields.io/badge/Techfest_2026--27-Namma_Space-00f0ff?style=for-the-badge)](https://techfest.org)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/coder-mrjk/vytrix/blob/main/pipeline/namma_space_pipeline.ipynb)
+[![Techfest IIT Bombay](https://img.shields.io/badge/Techfest_2026--27-IIT_Bombay-00f0ff?style=for-the-badge)](https://techfest.org)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/coder-mrjk/vytrix/blob/main/pipeline/vytrix_pipeline.ipynb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](THIRD_PARTY.md)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript)](viewer/tsconfig.json)
 
 > **Team:** VYTRO SQUAD  
-> **Challenge:** Namma Space (Techfest 2026-27, IIT Bombay — Round 1)  
+> **Challenge:** Techfest 2026-27, IIT Bombay (Round 1)  
 > **Repository:** [https://github.com/coder-mrjk/vytrix.git](https://github.com/coder-mrjk/vytrix.git)
 
 ---
@@ -89,14 +89,14 @@ Open `http://localhost:3000` in Google Chrome, Microsoft Edge, or Mozilla Firefo
 
 Judges and users can reproduce the complete 3D digital twin on a free Google Colab T4 GPU:
 
-1. Click the **[Open in Colab](https://colab.research.google.com/github/coder-mrjk/vytrix/blob/main/pipeline/namma_space_pipeline.ipynb)** badge above.
+1. Click the **[Open in Colab](https://colab.research.google.com/github/coder-mrjk/vytrix/blob/main/pipeline/vytrix_pipeline.ipynb)** badge above.
 2. Select **Runtime $\rightarrow$ Change runtime type $\rightarrow$ GPU (T4)**.
 3. Follow the numbered cells to execute the pipeline:
    - **Cell 0–1:** GPU check and pinned dependency install.
    - **Cell 2–4:** Google Drive checkpoint mount and video selection.
    - **Cell 5:** Run full reconstruction:
      ```bash
-     python -m namma.run --video "video.mp4" --config config.yaml
+     python -m vytrix.run --video "video.mp4" --config config.yaml
      ```
    - **Cell 6:** Download the generated `vytrix_scene_bundle.zip` and place it in `viewer/public/scenes/home-01/`.
 
@@ -107,11 +107,11 @@ Judges and users can reproduce the complete 3D digital twin on a free Google Col
 To verify the geometric normalization, Rodrigues rotation matrices, and RANSAC plane fitting:
 
 ```bash
-# Using uv (fast standalone Python)
-uv run --with pytest --with numpy pytest test/test_normalization.py -v
+# Using pytest
+PYTHONPATH=pipeline pytest test/test_normalization.py -v
 ```
 
-All 4 geometric test suites pass with zero warnings.
+All geometric test suites pass with zero warnings.
 
 ---
 
@@ -126,7 +126,7 @@ All 4 geometric test suites pass with zero warnings.
 ├── THIRD_PARTY.md          # Dependency licenses and IP citations
 ├── config.yaml             # Central pipeline configuration parameters
 ├── pipeline/
-│   ├── namma/              # Python reconstruction package
+│   ├── vytrix/             # Python reconstruction package
 │   │   ├── preprocess.py   # Stage 1: Frame extraction & blur filtering
 │   │   ├── sfm.py          # Stage 2: COLMAP pose estimation
 │   │   ├── train.py        # Stage 3: 3DGS trainer wrapper
@@ -134,7 +134,7 @@ All 4 geometric test suites pass with zero warnings.
 │   │   ├── optimize.py     # Stage 5: Splat pruning & compression
 │   │   ├── package.py      # Stage 6: scene.json generation
 │   │   └── run.py          # CLI runner
-│   ├── namma_space_pipeline.ipynb # Google Colab pipeline driver notebook
+│   ├── vytrix_pipeline.ipynb # Google Colab pipeline driver notebook
 │   └── requirements.txt    # Pinned Python dependencies
 ├── viewer/                 # Zero-install Vite + TypeScript + Three.js app
 │   ├── src/
