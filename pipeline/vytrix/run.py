@@ -38,6 +38,7 @@ def run_pipeline(
     config_path: str | Path = "config.yaml",
     work_dir: str | Path = "data/work",
     force: bool = False,
+    from_stage: int = 1,
     scale_p1: list[float] | None = None,
     scale_p2: list[float] | None = None,
     scale_distance: float | None = 1.0,
@@ -62,8 +63,8 @@ def run_pipeline(
     # Stage 1: Preprocessing (Frame Extraction & Blur Filter)
     stage1_out = w_dir / "preprocess"
     manifest1 = stage1_out / "preprocess_manifest.json"
-    if manifest1.exists() and not force:
-        logger.info("[SKIP] Stage 1 (Preprocess) output already exists.")
+    if from_stage > 1 or (manifest1.exists() and not force):
+        logger.info("[SKIP] Stage 1 (Preprocess) output already exists (or from_stage > 1).")
     else:
         if not video_path:
             logger.warning("No video path provided; skipping Stage 1 extraction.")
@@ -81,8 +82,8 @@ def run_pipeline(
     # Stage 2: COLMAP SfM
     stage2_out = w_dir / "sfm"
     manifest2 = stage2_out / "sfm_metrics.json"
-    if manifest2.exists() and not force:
-        logger.info("[SKIP] Stage 2 (SfM) output already exists.")
+    if from_stage > 2 or (manifest2.exists() and not force):
+        logger.info("[SKIP] Stage 2 (SfM) output already exists (or from_stage > 2).")
     else:
         logger.info("[RUN] Stage 2: COLMAP Structure-from-Motion...")
         cfg_sfm = config.get("sfm", {})
@@ -103,8 +104,8 @@ def run_pipeline(
     # Stage 3: Splat Training
     stage3_out = w_dir / "train"
     manifest3 = stage3_out / "train_metrics.json"
-    if manifest3.exists() and not force:
-        logger.info("[SKIP] Stage 3 (Train) output already exists.")
+    if from_stage > 3 or (manifest3.exists() and not force):
+        logger.info("[SKIP] Stage 3 (Train) output already exists (or from_stage > 3); reusing trained model.")
     else:
         logger.info("[RUN] Stage 3: 3D Gaussian Splatting Training...")
         cfg_train = config.get("training", {})
@@ -119,7 +120,7 @@ def run_pipeline(
     # Stage 4: Scene Normalization
     stage4_out = w_dir / "normalize"
     manifest4 = stage4_out / "normalization_manifest.json"
-    if manifest4.exists() and not force:
+    if from_stage > 4 or (manifest4.exists() and not force and not scale_p1):
         logger.info("[SKIP] Stage 4 (Normalize) output already exists.")
     else:
         logger.info("[RUN] Stage 4: Normalizing Scene Coordinates...")
@@ -184,7 +185,7 @@ def run_pipeline(
     # Stage 5: Splat Optimization & Compression
     stage5_out = w_dir / "optimize"
     manifest5 = stage5_out / "optimize_manifest.json"
-    if manifest5.exists() and not force:
+    if from_stage > 5 or (manifest5.exists() and not force and not scale_p1):
         logger.info("[SKIP] Stage 5 (Optimize) output already exists.")
     else:
         logger.info("[RUN] Stage 5: Splat Opacity Pruning & Web Compression...")
@@ -222,6 +223,7 @@ def main() -> None:
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to config.yaml")
     parser.add_argument("--work-dir", type=str, default="data/work", help="Intermediate work directory")
     parser.add_argument("--force", action="store_true", help="Force rerun of all stages")
+    parser.add_argument("--from-stage", type=int, default=1, choices=[1, 2, 3, 4, 5, 6], help="Resume pipeline starting from stage (e.g. 4 for scale recalibration without retraining)")
     parser.add_argument("--scale-points", type=str, default=None, help="Comma-separated 'x1,y1,z1,x2,y2,z2' for metric scale")
     parser.add_argument("--scale-distance", type=float, default=1.0, help="Real-world distance in metres between scale points")
 
@@ -246,6 +248,7 @@ def main() -> None:
             config_path=args.config,
             work_dir=args.work_dir,
             force=args.force,
+            from_stage=args.from_stage,
             scale_p1=scale_p1,
             scale_p2=scale_p2,
             scale_distance=args.scale_distance,

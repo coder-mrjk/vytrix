@@ -1,8 +1,12 @@
 """Dry-run smoke test runner for VYTRIX reconstruction pipeline.
 
-Runs a fast end-to-end smoke test on a 30-frame clip (or 200 training steps)
-to validate CUDA, COLMAP, Ninja JIT compiler, and dependencies in ~3-5 minutes
-before executing the full capture reconstruction.
+Runs a fast end-to-end smoke test on a short 30-60 second smartphone video clip
+(with 30 extracted frames and 200 training steps) to validate CUDA, COLMAP,
+Ninja JIT compiler, and dependencies in ~3-5 minutes before executing the full
+reconstruction.
+
+Note: COLMAP requires genuine 3D parallax to triangulate feature points, so a
+real video clip must be provided via --video.
 """
 
 from __future__ import annotations
@@ -13,7 +17,6 @@ import sys
 import time
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 from vytrix.config import load_config
@@ -33,24 +36,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger("vytrix.dry_run")
 
 
-def create_synthetic_smoke_video(output_mp4: Path, num_frames: int = 30) -> Path:
-    """Generate a minimal synthetic 30-frame MP4 video if no clip is available."""
-    output_mp4.parent.mkdir(parents=True, exist_ok=True)
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(str(output_mp4), fourcc, 15.0, (640, 480))
-
-    for i in range(num_frames):
-        img = np.zeros((480, 640, 3), dtype=np.uint8)
-        # Draw moving high-contrast textured patterns
-        cv2.rectangle(img, (50 + i * 5, 50), (200 + i * 5, 200), (0, 240, 255), -1)
-        cv2.circle(img, (320, 240 + int(np.sin(i * 0.2) * 30)), 60, (255, 100, 50), -1)
-        cv2.putText(img, f"VYTRIX SMOKE FRAME {i:03d}", (40, 400), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
-        writer.write(img)
-
-    writer.release()
-    return output_mp4
-
-
 def run_dry_run_smoke_test(
     video_path: str | Path | None = None,
     work_dir: str | Path = "data/dry_run_work",
@@ -63,18 +48,30 @@ def run_dry_run_smoke_test(
     print("\n=======================================================")
     print("      VYTRIX PIPELINE DRY RUN & SYSTEM SMOKE TEST      ")
     print("=======================================================")
+
+    if not video_path:
+        err = (
+            "Dry-run smoke test requires a real 30-60 second smartphone video clip (pass --video path/to/clip.mp4). "
+            "COLMAP Structure-from-Motion requires genuine multiview 3D parallax to triangulate feature points "
+            "and cannot reconstruct synthetic 2D frames."
+        )
+        print(f"[FAIL] Parameter Error: {err}")
+        results["Input Video Verification"] = f"FAIL ({err})"
+        return results
+
+    vid_p = Path(video_path)
+    if not vid_p.exists():
+        err = f"Input video file not found at: {vid_p.resolve()}"
+        print(f"[FAIL] Input Video Verification: {err}")
+        results["Input Video Verification"] = f"FAIL ({err})"
+        return results
+
     total_start = time.time()
 
     # Stage 1: Preprocess (~30 frames)
     t0 = time.time()
     s1_out = w_dir / "preprocess"
     try:
-        vid_p = Path(video_path) if video_path else None
-        if not vid_p or not vid_p.exists():
-            synth_mp4 = w_dir / "smoke_clip.mp4"
-            print("Notice: No input video specified; synthesizing 30-frame test clip...")
-            vid_p = create_synthetic_smoke_video(synth_mp4, num_frames=30)
-
         s1_manifest = extract_frames(
             video_path=vid_p,
             output_dir=s1_out,
@@ -83,9 +80,20 @@ def run_dry_run_smoke_test(
             downscale_factor=2,
         )
         dt = time.time() - t0
-        frames_cnt = s1_manifest["selected_frames_count"]
-        results["Stage 1 (Preprocess)"] = f"PASS ({frames_cnt} frames extracted in {dt:.1f}s)"
-        print(f"[PASS] Stage 1 (Preprocess): Extracted {frames_cnt} frames ({dt:.1f}s)")
+        frames_dir = s1_out / "frames"
+        frame_files = list(frames_dir.glob("*.jpg")) + list(frames_dir.glob("*.png"))
+        manifest1 = s1_out / "preprocess_manifest.json"
+
+        # Explicit measured condition checks
+        if not manifest1.exists() or manifest1.stat().st_size == 0:
+            raise RuntimeError("preprocess_manifest.json was not generated or is 0 bytes.")
+        if len(frame_files) < 15:
+            raise RuntimeError(f"Only {len(frame_files)} frames extracted; minimum 15 required for SfM.")
+        if s1_manifest["selected_frames_count"] != len(frame_files):
+            raise RuntimeError("Frame count mismatch between manifest and directory.")
+
+        results["Stage 1 (Preprocess)"] = f"PASS ({len(frame_files)} frames, size {manifest1.stat().st_size}B, {dt:.1f}s)"
+        print(f"[PASS] Stage 1 (Preprocess): Extracted {len(frame_files)} frames ({dt:.1f}s)")
     except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
         results["Stage 1 (Preprocess)"] = f"FAIL ({e})"
         print(f"[FAIL] Stage 1 (Preprocess): {e}")
@@ -95,7 +103,6 @@ def run_dry_run_smoke_test(
     t0 = time.time()
     s2_out = w_dir / "sfm"
     try:
-        frames_dir = s1_out / "frames"
         sfm_res = run_colmap_sfm(
             images_dir=frames_dir,
             output_dir=s2_out,
@@ -103,12 +110,28 @@ def run_dry_run_smoke_test(
             matcher="exhaustive",
             matcher_auto_threshold=300,
             use_gpu=True,
-            min_registered_ratio=0.30,  # Lower threshold for smoke test clip
+            min_registered_ratio=0.30,  # Minimum 30% for short smoke clip
         )
         dt = time.time() - t0
+        manifest2 = s2_out / "sfm_metrics.json"
+        sparse_model = Path(sfm_res["sparse_model_dir"])
         reg = sfm_res["registered_images"]
         tot = sfm_res["total_images"]
-        results["Stage 2 (COLMAP SfM)"] = f"PASS ({reg}/{tot} registered in {dt:.1f}s)"
+        pts = sfm_res["points_count"]
+
+        # Explicit measured condition checks
+        if not manifest2.exists() or manifest2.stat().st_size == 0:
+            raise RuntimeError("sfm_metrics.json was not generated or is 0 bytes.")
+        if reg < 5:
+            raise RuntimeError(f"COLMAP only registered {reg}/{tot} images (minimum 5 required).")
+        if pts < 20:
+            raise RuntimeError(f"Only {pts} 3D points triangulated (minimum 20 required).")
+        has_cameras = (sparse_model / "cameras.bin").exists() or (sparse_model / "cameras.txt").exists()
+        has_images = (sparse_model / "images.bin").exists() or (sparse_model / "images.txt").exists()
+        if not (has_cameras and has_images):
+            raise RuntimeError(f"Sparse model directory {sparse_model} missing cameras/images files.")
+
+        results["Stage 2 (COLMAP SfM)"] = f"PASS ({reg}/{tot} registered, {pts} points, {dt:.1f}s)"
         print(f"[PASS] Stage 2 (COLMAP SfM): {reg}/{tot} images registered ({dt:.1f}s)")
     except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
         results["Stage 2 (COLMAP SfM)"] = f"FAIL ({e})"
@@ -119,18 +142,30 @@ def run_dry_run_smoke_test(
     t0 = time.time()
     s3_out = w_dir / "train"
     try:
-        sparse_dir = s2_out / "sparse" / "0"
-        if not sparse_dir.exists():
-            sparse_dir = s2_out / "sparse"
         train_res = train_gaussian_splat(
-            data_dir=sparse_dir,
+            data_dir=sparse_model,
             output_dir=s3_out,
             iterations=200,
             sh_degree=1,
         )
         dt = time.time() - t0
-        results["Stage 3 (3DGS Training)"] = f"PASS (200 steps & CUDA compilation in {dt:.1f}s)"
-        print(f"[PASS] Stage 3 (3DGS Training): 200 steps complete ({dt:.1f}s)")
+        raw_ply = Path(train_res["ply_file"])
+        manifest3 = s3_out / "train_metrics.json"
+
+        # Explicit measured condition checks
+        if not manifest3.exists() or manifest3.stat().st_size == 0:
+            raise RuntimeError("train_metrics.json was not generated or is 0 bytes.")
+        if not raw_ply.exists():
+            raise RuntimeError(f"Trained PLY point cloud missing: {raw_ply}")
+        if raw_ply.stat().st_size < 1000:
+            raise RuntimeError(f"Trained PLY {raw_ply} is corrupt/empty ({raw_ply.stat().st_size} bytes).")
+
+        v_cnt, _, _ = parse_ply_header(raw_ply.read_bytes()[:4096])
+        if v_cnt < 20:
+            raise RuntimeError(f"Only {v_cnt} Gaussians generated (minimum 20 required).")
+
+        results["Stage 3 (3DGS Training)"] = f"PASS ({v_cnt} Gaussians, {raw_ply.stat().st_size}B in {dt:.1f}s)"
+        print(f"[PASS] Stage 3 (3DGS Training): {v_cnt} Gaussians trained ({dt:.1f}s)")
     except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
         results["Stage 3 (3DGS Training)"] = f"FAIL ({e})"
         print(f"[FAIL] Stage 3 (3DGS Training): {e}")
@@ -141,9 +176,7 @@ def run_dry_run_smoke_test(
     s4_out = w_dir / "normalize"
     s4_out.mkdir(parents=True, exist_ok=True)
     try:
-        camera_centers, camera_ups = load_colmap_camera_poses(sparse_dir)
-        raw_ply = Path(train_res["ply_file"])
-
+        camera_centers, camera_ups = load_colmap_camera_poses(sparse_model)
         with open(raw_ply, "rb") as f:
             h_bytes = f.read(4096)
         v_cnt, props, offset = parse_ply_header(h_bytes)
@@ -164,7 +197,17 @@ def run_dry_run_smoke_test(
         norm_ply = s4_out / "normalized_splat.ply"
         normalize_splat_ply(raw_ply, norm_ply, transform_matrix, scale_factor=scale_factor)
         dt = time.time() - t0
-        results["Stage 4 (Normalization)"] = f"PASS (Floor fitted at Y={meta['floor_level_y']:.2f} in {dt:.1f}s)"
+
+        manifest4 = s4_out / "normalization_manifest.json"
+        # Explicit measured condition checks
+        if not manifest4.exists() or manifest4.stat().st_size == 0:
+            raise RuntimeError("normalization_manifest.json missing.")
+        if not norm_ply.exists() or norm_ply.stat().st_size < 1000:
+            raise RuntimeError("normalized_splat.ply missing or corrupt.")
+        if meta["bounds"]["min"][1] != 0.0:
+            raise RuntimeError(f"Floor Y not leveled to 0.0 (got {meta['bounds']['min'][1]}).")
+
+        results["Stage 4 (Normalization)"] = f"PASS (Floor leveled to Y=0, inlier ratio {meta['inlier_ratio']:.2f}, {dt:.1f}s)"
         print(f"[PASS] Stage 4 (Normalization): Floor leveled to Y=0 ({dt:.1f}s)")
     except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
         results["Stage 4 (Normalization)"] = f"FAIL ({e})"
@@ -175,15 +218,29 @@ def run_dry_run_smoke_test(
     t0 = time.time()
     s5_out = w_dir / "optimize"
     try:
-        opt_res = compress_and_optimize_splat(
+        _ = compress_and_optimize_splat(
             input_ply_path=norm_ply,
             output_dir=s5_out,
             opacity_threshold=0.01,
             export_format="splat",
         )
         dt = time.time() - t0
-        n_gauss = opt_res["pruned_gaussians"]
-        results["Stage 5 (Optimize)"] = f"PASS ({n_gauss} Gaussians packed in {dt:.1f}s)"
+        manifest5 = s5_out / "optimize_manifest.json"
+        splat_file = s5_out / "scene.splat"
+
+        # Explicit measured condition checks
+        if not manifest5.exists() or manifest5.stat().st_size == 0:
+            raise RuntimeError("optimize_manifest.json missing.")
+        if not splat_file.exists():
+            raise RuntimeError("scene.splat missing.")
+        file_bytes = splat_file.stat().st_size
+        if file_bytes == 0 or file_bytes % 32 != 0:
+            raise RuntimeError(f"scene.splat size ({file_bytes} B) is not a non-zero multiple of 32 bytes.")
+        n_gauss = file_bytes // 32
+        if n_gauss < 10:
+            raise RuntimeError(f"Only {n_gauss} Gaussians packed (minimum 10 required).")
+
+        results["Stage 5 (Optimize)"] = f"PASS ({n_gauss} Gaussians, {file_bytes}B, {dt:.1f}s)"
         print(f"[PASS] Stage 5 (Optimize): {n_gauss} Gaussians packed to 32-byte .splat ({dt:.1f}s)")
     except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
         results["Stage 5 (Optimize)"] = f"FAIL ({e})"
@@ -194,13 +251,25 @@ def run_dry_run_smoke_test(
     t0 = time.time()
     try:
         config = load_config("config.yaml")
-        _ = package_scene(
+        scene_manifest = package_scene(
             config=config,
             stage_dir=w_dir,
             viewer_scenes_dir="viewer/public/scenes",
         )
         dt = time.time() - t0
-        results["Stage 6 (Packaging)"] = f"PASS (scene.json generated in {dt:.1f}s)"
+        manifest6 = Path("viewer/public/scenes/default/scene.json")
+        target_splat = Path("viewer/public/scenes/default/scene.splat")
+
+        # Explicit measured condition checks
+        if not manifest6.exists() or manifest6.stat().st_size == 0:
+            raise RuntimeError("viewer scene.json missing or empty.")
+        if not target_splat.exists() or target_splat.stat().st_size == 0:
+            raise RuntimeError("viewer scene.splat missing or empty.")
+        for req_field in ["scene_id", "splat", "transform_applied", "bounds", "spawn", "metrics"]:
+            if req_field not in scene_manifest:
+                raise RuntimeError(f"scene.json missing required field '{req_field}'.")
+
+        results["Stage 6 (Packaging)"] = f"PASS (Manifest valid, splat {target_splat.stat().st_size}B in {dt:.1f}s)"
         print(f"[PASS] Stage 6 (Packaging): Manifest generated ({dt:.1f}s)")
     except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
         results["Stage 6 (Packaging)"] = f"FAIL ({e})"
@@ -217,7 +286,7 @@ def run_dry_run_smoke_test(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="VYTRIX Dry-Run Smoke Test Runner")
-    parser.add_argument("--video", type=str, default=None, help="Optional 30-60s clip for smoke test")
+    parser.add_argument("--video", type=str, required=True, help="Path to real 30-60s smartphone video clip")
     parser.add_argument("--work-dir", type=str, default="data/dry_run_work", help="Dry run output directory")
     args = parser.parse_args()
 
