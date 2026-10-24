@@ -363,3 +363,121 @@ def test_parse_model_analyzer_combined_stdout_stderr():
     assert parsed["mean_reprojection_error_px"] == 0.693
 
 
+def test_pass2_rescaling_floor_and_distance(tmp_path: Path):
+    """Verify Pass 2 (--from-stage 4 with --scale-points):
+
+    1. Reuses Stage 3 trained model without retraining.
+    2. Levels floor to Y=0 with bounds.min[1] within 1e-6.
+    3. Re-scales model such that distance between picked points equals real distance within 1%.
+    4. Computes floor offset strictly after metric scaling.
+    """
+    from vytrix.run import run_pipeline
+
+    work_dir = tmp_path / "work"
+    stage2_sparse = work_dir / "sfm" / "sparse" / "0"
+    stage2_sparse.mkdir(parents=True)
+    stage3_train = work_dir / "train"
+    stage3_train.mkdir(parents=True)
+
+    # 1. Setup Stage 2 camera pose: camera at (0, 1.5, 0) looking forward, up vector = [0, 1, 0]
+    with open(stage2_sparse / "images.txt", "w") as f:
+        f.write("# Image list\n")
+        f.write("1 0.0 1.0 0.0 0.0 0.0 1.5 0.0 1 frame_001.jpg\n\n")
+
+    # 2. Setup Stage 3 trained output (splat_raw.ply)
+    rng = np.random.default_rng(123)
+    gaussians = []
+    # Two calibration points on the floor with SfM distance = 0.50 m
+    p1_sfm = [-0.25, -0.5, 0.0]
+    p2_sfm = [0.25, -0.5, 0.0]
+
+    gaussians.append({
+        "x": p1_sfm[0], "y": p1_sfm[1], "z": p1_sfm[2],
+        "opacity": 5.0,
+        "scale_0": -2.0, "scale_1": -2.0, "scale_2": -2.0,
+        "rot_0": 1.0, "rot_1": 0.0, "rot_2": 0.0, "rot_3": 0.0,
+        "f_dc_0": 0.5, "f_dc_1": 0.5, "f_dc_2": 0.5,
+    })
+    gaussians.append({
+        "x": p2_sfm[0], "y": p2_sfm[1], "z": p2_sfm[2],
+        "opacity": 5.0,
+        "scale_0": -2.0, "scale_1": -2.0, "scale_2": -2.0,
+        "rot_0": 1.0, "rot_1": 0.0, "rot_2": 0.0, "rot_3": 0.0,
+        "f_dc_0": 0.5, "f_dc_1": 0.5, "f_dc_2": 0.5,
+    })
+
+    # Add 100 floor points at Y = -0.5
+    for _ in range(100):
+        gaussians.append({
+            "x": float(rng.uniform(-2, 2)),
+            "y": -0.5 + float(rng.normal(0, 0.002)),
+            "z": float(rng.uniform(-2, 2)),
+            "opacity": 4.0,
+            "scale_0": -2.0, "scale_1": -2.0, "scale_2": -2.0,
+            "rot_0": 1.0, "rot_1": 0.0, "rot_2": 0.0, "rot_3": 0.0,
+            "f_dc_0": 0.5, "f_dc_1": 0.5, "f_dc_2": 0.5,
+        })
+
+    raw_ply = stage3_train / "splat_raw.ply"
+    _create_synthetic_ply(raw_ply, gaussians)
+
+    train_manifest = stage3_train / "train_metrics.json"
+    with open(train_manifest, "w") as f:
+        json.dump({"iterations": 15000, "ply_file": str(raw_ply.resolve())}, f)
+    stage3_mtime_before = train_manifest.stat().st_mtime
+
+    # 3. Execute Pass 2: from_stage=4, scale_distance = 1.00 m
+    # SfM distance is 0.50 m, so scale factor must be 1.00 / 0.50 = 2.00
+    run_pipeline(
+        video_path=None,
+        config_path="config.yaml",
+        work_dir=work_dir,
+        from_stage=4,
+        scale_p1=p1_sfm,
+        scale_p2=p2_sfm,
+        scale_distance=1.00,
+        viewer_scenes_dir=str(tmp_path / "scenes"),
+    )
+
+    # 4. Confirm Stage 3 was NOT rerun (trained output was reused)
+    assert train_manifest.stat().st_mtime == stage3_mtime_before
+    assert (work_dir / "preprocess").exists() is False
+
+    # 5. Check Stage 4 Normalization output
+    norm_manifest_path = work_dir / "normalize" / "normalization_manifest.json"
+    assert norm_manifest_path.exists()
+    with open(norm_manifest_path, "r") as f:
+        norm_meta = json.load(f)
+
+    # Scale factor applied must be 2.0
+    assert np.isclose(norm_meta["scale_applied"], 2.0, rtol=1e-3)
+    # Floor is at Y = 0 (bounds.min Y within 1e-6)
+    assert abs(norm_meta["bounds"]["min"][1]) < 1e-6
+
+    # 6. Check rescaled points distance:
+    norm_ply = work_dir / "normalize" / "normalized_splat.ply"
+    assert norm_ply.exists()
+    v_cnt, props, offset = parse_ply_header(norm_ply.read_bytes()[:4096])
+    type_map = {"float": "<f4", "double": "<f8", "uchar": "u1", "uint8": "u1", "int": "<i4"}
+    dt_ply = np.dtype([(n, type_map.get(t, "<f4")) for n, t in props])
+    with open(norm_ply, "rb") as f:
+        f.seek(offset)
+        transformed_pts = np.fromfile(f, dtype=dt_ply, count=v_cnt)
+
+    p1_new = np.array([transformed_pts["x"][0], transformed_pts["y"][0], transformed_pts["z"][0]])
+    p2_new = np.array([transformed_pts["x"][1], transformed_pts["y"][1], transformed_pts["z"][1]])
+
+    rescaled_distance = float(np.linalg.norm(p1_new - p2_new))
+    # Distance must equal real distance (1.00 m) within 1%
+    assert np.isclose(rescaled_distance, 1.00, rtol=0.01)
+
+    # Floor offset must have been computed AFTER scaling:
+    # Original floor was at Y = -0.5. With scale_factor = 2.0, scaled floor is at Y = -1.0.
+    # Therefore, floor translation must be +1.0 (so -1.0 + 1.0 = 0.0), NOT +0.5!
+    assert np.isclose(norm_meta["floor_level_y"], -1.0, atol=0.05)
+    # Both points were on the floor, so their new Y coordinates must be ~0.0
+    assert np.isclose(p1_new[1], 0.0, atol=0.01)
+    assert np.isclose(p2_new[1], 0.0, atol=0.01)
+
+
+

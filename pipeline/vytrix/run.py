@@ -42,6 +42,7 @@ def run_pipeline(
     scale_p1: list[float] | None = None,
     scale_p2: list[float] | None = None,
     scale_distance: float | None = 1.0,
+    viewer_scenes_dir: str | Path = "viewer/public/scenes",
 ) -> None:
     """Run all stages of the VYTRIX reconstruction pipeline idempotently.
 
@@ -207,7 +208,7 @@ def run_pipeline(
     scene_manifest = package_scene(
         config=config,
         stage_dir=w_dir,
-        viewer_scenes_dir="viewer/public/scenes",
+        viewer_scenes_dir=viewer_scenes_dir,
     )
 
     total_elapsed = time.time() - total_start

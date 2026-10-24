@@ -204,8 +204,8 @@ def run_dry_run_smoke_test(
             raise RuntimeError("normalization_manifest.json missing.")
         if not norm_ply.exists() or norm_ply.stat().st_size < 1000:
             raise RuntimeError("normalized_splat.ply missing or corrupt.")
-        if meta["bounds"]["min"][1] != 0.0:
-            raise RuntimeError(f"Floor Y not leveled to 0.0 (got {meta['bounds']['min'][1]}).")
+        if not (abs(meta["bounds"]["min"][1]) < 1e-6):
+            raise RuntimeError(f"Floor Y not leveled to 0.0 within tolerance (got {meta['bounds']['min'][1]}).")
 
         results["Stage 4 (Normalization)"] = f"PASS (Floor leveled to Y=0, inlier ratio {meta['inlier_ratio']:.2f}, {dt:.1f}s)"
         print(f"[PASS] Stage 4 (Normalization): Floor leveled to Y=0 ({dt:.1f}s)")
