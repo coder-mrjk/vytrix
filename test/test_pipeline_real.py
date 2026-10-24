@@ -15,6 +15,7 @@ from vytrix.normalize import (
 )
 from vytrix.optimize import convert_ply_to_splat, parse_ply_header
 from vytrix.package import package_scene
+from vytrix.sfm import parse_model_analyzer_output, select_best_sparse_model
 from vytrix.train import parse_trainer_eval_metrics
 
 
@@ -305,4 +306,60 @@ def test_normalize_splat_ply_transform(tmp_path: Path):
 
     # Scale in log-space: 0 + ln(2.0)
     assert np.isclose(transformed["scale_0"], np.log(2.0), atol=1e-5)
+
+
+def test_select_best_sparse_model_multiple_components(tmp_path: Path):
+    """Verify select_best_sparse_model picks sub-model with maximum registered images."""
+    sparse_root = tmp_path / "sparse"
+    sparse_root.mkdir()
+
+    # Sub-model 0: 30 images
+    m0 = sparse_root / "0"
+    m0.mkdir()
+    with open(m0 / "images.txt", "w") as f:
+        f.write("# Image list with two lines per image\n")
+        f.writelines(f"{i} 1 0 0 0 0 0 0 1 frame_{i}.jpg\n\n" for i in range(30))
+
+    # Sub-model 1: 180 images (largest component)
+    m1 = sparse_root / "1"
+    m1.mkdir()
+    with open(m1 / "images.txt", "w") as f:
+        f.write("# Image list with two lines per image\n")
+        f.writelines(f"{i} 1 0 0 0 0 0 0 1 frame_{i}.jpg\n\n" for i in range(180))
+
+    # Sub-model 2: 15 images
+    m2 = sparse_root / "2"
+    m2.mkdir()
+    with open(m2 / "images.txt", "w") as f:
+        f.write("# Image list with two lines per image\n")
+        f.writelines(f"{i} 1 0 0 0 0 0 0 1 frame_{i}.jpg\n\n" for i in range(15))
+
+    best = select_best_sparse_model(sparse_root)
+    assert best == m1
+    assert best.name == "1"
+
+
+def test_parse_model_analyzer_combined_stdout_stderr():
+    """Verify parse_model_analyzer_output parses images and reprojection error from combined output."""
+    sample_colmap_output = (
+        "Reading reconstruction...\n"
+        "----------------------------------------------------------------\n"
+        "Model statistics:\n"
+        "----------------------------------------------------------------\n"
+        "Cameras: 1\n"
+        "Images: 350\n"
+        "Registered images: 342\n"
+        "Points: 48921\n"
+        "Mean track length: 4.821\n"
+        "Mean observations per image: 681.3\n"
+        "Mean reprojection error: 0.693 px\n"
+        "----------------------------------------------------------------\n"
+    )
+
+    parsed = parse_model_analyzer_output(sample_colmap_output)
+    assert parsed["total_images"] == 350
+    assert parsed["registered_images"] == 342
+    assert parsed["points_count"] == 48921
+    assert parsed["mean_reprojection_error_px"] == 0.693
+
 

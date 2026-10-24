@@ -2,6 +2,7 @@ import { SceneManager } from "./scene/SceneManager";
 import { FirstPersonControls } from "./controls/FirstPersonControls";
 import { HUD } from "./ui/HUD";
 import { LoadingOverlay } from "./ui/LoadingOverlay";
+import { ScalePicker } from "./ui/ScalePicker";
 import { eventBus } from "./utils/eventBus";
 
 async function init() {
@@ -15,6 +16,8 @@ async function init() {
   const hud = new HUD();
   const sceneManager = new SceneManager(canvas);
   const controls = new FirstPersonControls(sceneManager.getCamera(), canvas);
+  const scalePicker = new ScalePicker(sceneManager);
+  (window as unknown as { scalePicker: ScalePicker }).scalePicker = scalePicker;
 
   // Overlay Click-to-Explore
   const clickOverlay = document.getElementById("click-overlay");

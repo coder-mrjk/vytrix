@@ -92,8 +92,12 @@ def run_pipeline(
                 images_dir=frames_dir,
                 output_dir=stage2_out,
                 camera_model=cfg_sfm.get("camera_model", "SIMPLE_RADIAL"),
+                matcher=cfg_sfm.get("matcher", "auto"),
+                matcher_auto_threshold=cfg_sfm.get("matcher_auto_threshold", 300),
                 overlap_window=cfg_sfm.get("overlap_window", 20),
                 loop_detection=cfg_sfm.get("loop_detection", True),
+                min_registered_ratio=cfg_sfm.get("min_registered_ratio", 0.70),
+                use_gpu=cfg_sfm.get("use_gpu", True),
             )
 
     # Stage 3: Splat Training

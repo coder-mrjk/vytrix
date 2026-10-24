@@ -67,6 +67,14 @@ export class SceneManager {
     return this.camera;
   }
 
+  public getScene(): THREE.Scene {
+    return this.scene;
+  }
+
+  public getCanvas(): HTMLCanvasElement {
+    return this.canvas;
+  }
+
   public getBoundsController(): BoundsController | null {
     return this.boundsController;
   }

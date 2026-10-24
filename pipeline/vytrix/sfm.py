@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import struct
 import subprocess
 import time
 from pathlib import Path
@@ -96,8 +97,11 @@ def select_best_sparse_model(sparse_root: Path) -> Path:
         img_bin = s_dir / "images.bin"
         img_txt = s_dir / "images.txt"
         if img_bin.exists():
-            # Rough estimate from file size
-            count = img_bin.stat().st_size
+            try:
+                with open(img_bin, "rb") as f:
+                    count = struct.unpack("<Q", f.read(8))[0]
+            except (OSError, struct.error):
+                count = img_bin.stat().st_size
         elif img_txt.exists():
             with open(img_txt, "r", encoding="utf-8", errors="ignore") as f:
                 # In images.txt, non-comment odd lines contain image names
@@ -107,7 +111,7 @@ def select_best_sparse_model(sparse_root: Path) -> Path:
             best_count = count
             best_dir = s_dir
 
-    logger.info("Selected COLMAP sub-model %s (score: %d)", best_dir.name, best_count)
+    logger.info("Selected COLMAP sub-model %s with %d registered images", best_dir.name, best_count)
     return best_dir
 
 
@@ -175,10 +179,12 @@ def run_colmap_sfm(
     logger.info("Executing: %s", " ".join(cmd_extract))
     res_extract = subprocess.run(cmd_extract, check=False, capture_output=True, text=True)
     if res_extract.returncode != 0:
-        if use_gpu and ("CUDA" in res_extract.stderr or "gpu" in res_extract.stderr.lower()):
-            logger.warning("GPU feature extraction failed. Falling back to CPU SIFT...")
+        if use_gpu and ("cuda" in res_extract.stderr.lower() or "gpu" in res_extract.stderr.lower()):
+            logger.warning("GPU feature extraction failed (COLMAP binary may lack CUDA support). Falling back to CPU SIFT...")
             cmd_extract[-1] = "0"
-            subprocess.run(cmd_extract, check=True)
+            res_extract_cpu = subprocess.run(cmd_extract, check=False, capture_output=True, text=True)
+            if res_extract_cpu.returncode != 0:
+                raise RuntimeError(f"COLMAP feature extraction failed in CPU fallback mode:\n{res_extract_cpu.stderr}")
         else:
             raise RuntimeError(f"COLMAP feature extraction failed:\n{res_extract.stderr}")
 
@@ -214,10 +220,12 @@ def run_colmap_sfm(
     logger.info("Executing: %s", " ".join(cmd_match))
     res_match = subprocess.run(cmd_match, check=False, capture_output=True, text=True)
     if res_match.returncode != 0:
-        if use_gpu:
-            logger.warning("GPU matching failed. Falling back to CPU matching...")
+        if use_gpu and ("cuda" in res_match.stderr.lower() or "gpu" in res_match.stderr.lower()):
+            logger.warning("GPU matching failed (COLMAP binary may lack CUDA support). Falling back to CPU matching...")
             cmd_match[-1] = "0"
-            subprocess.run(cmd_match, check=True)
+            res_match_cpu = subprocess.run(cmd_match, check=False, capture_output=True, text=True)
+            if res_match_cpu.returncode != 0:
+                raise RuntimeError(f"COLMAP matcher failed in CPU fallback mode:\n{res_match_cpu.stderr}")
         else:
             raise RuntimeError(f"COLMAP matcher failed:\n{res_match.stderr}")
 
