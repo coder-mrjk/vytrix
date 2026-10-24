@@ -6,14 +6,14 @@ Competition: **Techfest 2026-27, IIT Bombay (Round 1)**
 
 ---
 
-## ADR-001: 3D Reconstruction Technique (3D Gaussian Splatting)
+## ADR-001: 3D Reconstruction Technique (3D Gaussian Splatting via gsplat)
 - **Date:** 2026-10-10
-- **Decision:** Use 3D Gaussian Splatting (3DGS) via `gsplat` / `splatfacto` architecture rather than traditional NeRF or Photogrammetry Textured Meshes.
+- **Decision:** Use 3D Gaussian Splatting (3DGS) via `gsplat` (`examples/simple_trainer.py`) rather than traditional NeRF or Photogrammetry Textured Meshes.
 - **Alternatives Considered:**
   1. *Traditional MVS / Textured Mesh (COLMAP + OpenMVS / Poisson Reconstruction):* Produces noisy indoor meshes with holes on flat/reflective walls, low photorealism, and blurred textures.
-  2. *NeRF (Instant-NGP / Nerfstudio):* High photorealism but requires volumetric ray-marching at runtime; cannot maintain 60 FPS in zero-install browser on low-end integrated GPUs.
+  2. *NeRF (Instant-NGP / Nerfstudio):* Requires volumetric ray-marching at runtime; cannot maintain 60 FPS in zero-install browser on low-end integrated GPUs.
   3. *Inria Gaussian Splatting (Original codebase):* Uses a non-commercial research license that poses competition licensing risks.
-- **Why:** 3DGS produces photorealistic real-time rendering at 60+ FPS in browsers via WebGL2/WebGPU rasterizers with permissive Apache-2.0 / MIT licensing.
+- **Why:** `gsplat` provides a clean Apache-2.0 implementation with fewer dependencies that fits within a free Google Colab T4 GPU (16GB VRAM), producing photorealistic real-time rendering at 60+ FPS in browsers via WebGL2 rasterizers.
 
 ---
 

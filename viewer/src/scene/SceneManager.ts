@@ -169,7 +169,7 @@ export class SceneManager {
 
       await Promise.race([loadPromise, timeoutPromise]);
 
-      eventBus.emit("splats:loaded", this.manifest?.splat.num_gaussians || 250000);
+      eventBus.emit("splats:loaded", this.manifest?.splat.num_gaussians || 0);
       return true;
     } catch (err) {
       console.warn("Failed or timed out loading 3D Gaussian Splat scene. Falling back to procedural room:", err);

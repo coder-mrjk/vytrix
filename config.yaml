@@ -20,35 +20,27 @@ preprocess:
   min_frame_interval: 2
 
 sfm:
-  matcher: "sequential" # Suited for continuous video trajectories
+  matcher: "auto" # "auto": exhaustive when frames <= 300, sequential when > 300
+  matcher_auto_threshold: 300
   overlap_window: 20
   loop_detection: true
   camera_model: "SIMPLE_RADIAL" # Robust for smartphone video with unknown focal lengths
-  min_registered_ratio: 0.70 # Warn or abort if <70% frames register
+  min_registered_ratio: 0.70 # Abort if <70% frames register
+  use_gpu: true # Set false if COLMAP build lacks CUDA support
 
 training:
-  iterations: 15000 # Default for Colab T4 (approx 15-25 minutes)
+  iterations: 15000 # Default for Colab T4
   sh_degree: 3
-  densify_until_iter: 10000
-  densify_from_iter: 500
-  densification_interval: 100
-  opacity_reset_interval: 3000
-  checkpoint_interval: 5000
   colab_drive_checkpoint_dir: "/content/drive/MyDrive/VYTRIX_Checkpoints"
 
 normalization:
   floor_ransac:
     distance_threshold: 0.03 # 3 cm RANSAC plane tolerance
     max_iterations: 2000
-    expected_normal: [0.0, 1.0, 0.0]
-  outlier_removal:
-    percentile_low: 0.01 # Cut floaters below 1st percentile
-    percentile_high: 0.99 # Cut floaters above 99th percentile
 
 compression:
   prune_opacity_threshold: 0.05
-  export_format: "ksplat" # Highly compressed progressive format for @mkkellogg/gaussian-splats-3d
-  compression_level: 1
+  export_format: "splat" # Standard 32-byte Gaussian splat format
 
 viewer:
   walk_speed_m_per_s: 1.4

@@ -7,7 +7,7 @@ import struct
 from pathlib import Path
 
 import numpy as np
-from vytrix.normalize import fit_plane_ransac
+from vytrix.normalize import compute_scale_factor, fit_plane_ransac
 
 
 def test_sample_splat_binary_structure():
@@ -45,11 +45,20 @@ def test_sample_capture_meta():
         meta = json.load(f)
 
     assert meta["scale_reference"]["distance_meters"] == 1.00
-    tape_pts = np.array(meta["scale_reference"]["tape_points_sfm"])
-    assert tape_pts.shape == (2, 3)
+    assert meta["scale_reference"]["type"] == "measured_floor_tape"
 
-    measured_dist = np.linalg.norm(tape_pts[0] - tape_pts[1])
-    assert np.isclose(measured_dist, 1.00, atol=0.01)
+    # Verify uncalibrated fallback when points are not yet measured in SfM
+    s_factor, method, err = compute_scale_factor(None, None, meta["scale_reference"]["distance_meters"])
+    assert s_factor == 1.0
+    assert method == "uncalibrated"
+    assert err is None
+
+    # Verify two-point calibration when SfM coordinates are provided
+    p1 = [0.0, 0.0, 0.0]
+    p2 = [0.5, 0.0, 0.0]
+    s_cal, method_cal, _ = compute_scale_factor(p1, p2, 1.00)
+    assert np.isclose(s_cal, 2.0)
+    assert method_cal == "two_point_tape"
 
 
 def test_sample_splat_plane_fitting():

@@ -8,11 +8,7 @@
   "exposure_mode": "Locked (AE/AF Lock engaged)",
   "scale_reference": {
     "type": "measured_floor_tape",
-    "distance_meters": 1.00,
-    "tape_points_sfm": [
-      [-0.50, 0.02, 0.20],
-      [0.50, 0.02, 0.20]
-    ]
+    "distance_meters": 1.00
   },
   "sample_room": {
     "type": "Living Room & Entryway",

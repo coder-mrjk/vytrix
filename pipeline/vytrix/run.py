@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 import time
@@ -11,8 +12,14 @@ from pathlib import Path
 import numpy as np
 
 from vytrix.config import load_config
-from vytrix.normalize import normalize_scene
-from vytrix.optimize import compress_and_optimize_splat
+from vytrix.normalize import (
+    compute_scale_factor,
+    load_colmap_camera_poses,
+    normalize_scene,
+    normalize_splat_ply,
+    read_colmap_sparse_points,
+)
+from vytrix.optimize import compress_and_optimize_splat, parse_ply_header
 from vytrix.package import package_scene
 from vytrix.preprocess import extract_frames
 from vytrix.sfm import run_colmap_sfm
@@ -31,6 +38,9 @@ def run_pipeline(
     config_path: str | Path = "config.yaml",
     work_dir: str | Path = "data/work",
     force: bool = False,
+    scale_p1: list[float] | None = None,
+    scale_p2: list[float] | None = None,
+    scale_distance: float | None = 1.0,
 ) -> None:
     """Run all stages of the VYTRIX reconstruction pipeline idempotently.
 
@@ -110,15 +120,61 @@ def run_pipeline(
     else:
         logger.info("[RUN] Stage 4: Normalizing Scene Coordinates...")
         stage4_out.mkdir(parents=True, exist_ok=True)
-        # In full run, reads sparse points from Stage 2 or splat centroids
-        # Generate representative room cloud for normalization
-        np.random.seed(42)
-        sample_pts = np.random.uniform(-3, 3, size=(1000, 3))
-        sample_pts[:, 1] = 0.0 + np.random.normal(0, 0.02, size=1000)  # Floor points
-        _transformed_pts, _matrix, meta = normalize_scene(sample_pts, scale_factor=1.0)
-        with open(manifest4, "w", encoding="utf-8") as f:
-            import json
 
+        scale_factor, scale_method, _ = compute_scale_factor(scale_p1, scale_p2, scale_distance)
+
+        # Locate COLMAP sparse directory for camera poses
+        sparse_dir = stage2_out / "sparse" / "0"
+        if not sparse_dir.exists():
+            sparse_dir = stage2_out / "sparse"
+
+        camera_centers = None
+        camera_ups = None
+        if sparse_dir.exists():
+            try:
+                camera_centers, camera_ups = load_colmap_camera_poses(sparse_dir)
+            except (OSError, RuntimeError, ValueError) as e:
+                logger.warning("Could not load camera poses from %s: %s", sparse_dir, e)
+
+        raw_ply = stage3_out / "splat_raw.ply"
+        if raw_ply.exists():
+            logger.info("Normalizing trained splat point cloud: %s", raw_ply)
+            with open(raw_ply, "rb") as f:
+                header_data = f.read(4096)
+            v_cnt, props, offset = parse_ply_header(header_data)
+            type_map = {"float": "<f4", "double": "<f8", "uchar": "u1", "uint8": "u1", "int": "<i4"}
+            dt = np.dtype([(n, type_map.get(t, "<f4")) for n, t in props])
+            with open(raw_ply, "rb") as f:
+                f.seek(offset)
+                ply_points = np.fromfile(f, dtype=dt, count=v_cnt)
+            pts = np.stack([ply_points["x"], ply_points["y"], ply_points["z"]], axis=-1)
+
+            _transformed_pts, transform_matrix, meta = normalize_scene(
+                points=pts,
+                camera_centers=camera_centers,
+                camera_up_vectors=camera_ups,
+                scale_factor=scale_factor,
+            )
+            meta["scale_method"] = scale_method
+            norm_ply = stage4_out / "normalized_splat.ply"
+            normalize_splat_ply(raw_ply, norm_ply, transform_matrix, scale_factor=scale_factor)
+        elif sparse_dir.exists():
+            logger.info("No raw PLY found; fitting floor plane from COLMAP sparse cloud: %s", sparse_dir)
+            sparse_pts = read_colmap_sparse_points(sparse_dir)
+            _transformed_pts, transform_matrix, meta = normalize_scene(
+                points=sparse_pts,
+                camera_centers=camera_centers,
+                camera_up_vectors=camera_ups,
+                scale_factor=scale_factor,
+            )
+            meta["scale_method"] = scale_method
+        else:
+            raise FileNotFoundError(
+                f"Cannot run Stage 4 normalization: neither trained splat ({raw_ply}) nor "
+                f"COLMAP sparse model ({sparse_dir}) was found."
+            )
+
+        with open(manifest4, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2)
 
     # Stage 5: Splat Optimization & Compression
@@ -128,11 +184,17 @@ def run_pipeline(
         logger.info("[SKIP] Stage 5 (Optimize) output already exists.")
     else:
         logger.info("[RUN] Stage 5: Splat Opacity Pruning & Web Compression...")
+        norm_ply = stage4_out / "normalized_splat.ply"
+        input_ply = norm_ply if norm_ply.exists() else (stage3_out / "splat_raw.ply")
+        if not input_ply.exists():
+            raise FileNotFoundError(
+                f"Stage 5 requires normalized PLY at {norm_ply} or raw PLY at {stage3_out / 'splat_raw.ply'}"
+            )
         compress_and_optimize_splat(
-            input_ply_path=stage3_out / "splat_raw.ply",
+            input_ply_path=input_ply,
             output_dir=stage5_out,
             opacity_threshold=config.get("compression", {}).get("prune_opacity_threshold", 0.05),
-            export_format=config.get("compression", {}).get("export_format", "ksplat"),
+            export_format=config.get("compression", {}).get("export_format", "splat"),
         )
 
     # Stage 6: Packaging
@@ -156,14 +218,33 @@ def main() -> None:
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to config.yaml")
     parser.add_argument("--work-dir", type=str, default="data/work", help="Intermediate work directory")
     parser.add_argument("--force", action="store_true", help="Force rerun of all stages")
+    parser.add_argument("--scale-points", type=str, default=None, help="Comma-separated 'x1,y1,z1,x2,y2,z2' for metric scale")
+    parser.add_argument("--scale-distance", type=float, default=1.0, help="Real-world distance in metres between scale points")
 
     args = parser.parse_args()
+
+    scale_p1 = None
+    scale_p2 = None
+    if args.scale_points:
+        try:
+            coords = [float(x.strip()) for x in args.scale_points.split(",")]
+            if len(coords) == 6:
+                scale_p1 = coords[:3]
+                scale_p2 = coords[3:]
+            else:
+                logger.error("Expected 6 values for --scale-points (x1,y1,z1,x2,y2,z2), got %d", len(coords))
+        except ValueError as e:
+            logger.error("Invalid --scale-points values: %s", e)
+
     try:
         run_pipeline(
             video_path=args.video,
             config_path=args.config,
             work_dir=args.work_dir,
             force=args.force,
+            scale_p1=scale_p1,
+            scale_p2=scale_p2,
+            scale_distance=args.scale_distance,
         )
     except Exception:
         logger.exception("Pipeline execution failed")

@@ -13,6 +13,7 @@ These rules apply to every task in this repository. `SPEC.md` describes the proj
 ## 2. Truthfulness and verification
 - **Never invent** APIs, CLI flags, package names, versions, licence terms, or benchmark numbers. Read the official docs or the installed source. If you cannot verify, write `TODO(verify)` and tell me.
 - **Never claim "done" without evidence.** Evidence means test output, logs, screenshots, or browser-agent recordings. Report what was verified and what was not.
+- **Evidence-Based Rule:** If you say "done", give the evidence: command output, a screenshot or a log as text/markdown after each prompt work.
 - If a step must run on Google Colab (GPU), you can't run it. Provide exact steps, the expected output, and what to send back. Do not pretend it ran.
 - If something fails, say so plainly, show the error, and propose a diagnosis before changing approach.
 - Pin dependency versions you have verified. Do not silently upgrade or downgrade.
