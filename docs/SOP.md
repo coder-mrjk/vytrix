@@ -1,28 +1,46 @@
 # VYTRIX Standard Operating Procedure (SOP): Indoor Spatial Capture
 
-**Project:** VYTRIX (Techfest 2026-27, IIT Bombay)  
-**Target:** Non-technical operators capturing indoor environments with a smartphone for high-fidelity 3D Gaussian Splatting and metric digital twins.
+**Project:** VYTRIX  
+**Team:** VYTRO SQUAD  
+**Challenge:** Techfest 2026-27, IIT Bombay (Round 1)  
+**Status:** `ACTIVE SPECIFICATION - PENDING PHYSICAL USER CAPTURE`  
+**Purpose:** Instructions for capturing physical indoor spaces with a standard smartphone camera to generate high-fidelity 3D Gaussian Splats and metrically calibrated digital twins.
 
 ---
 
-## 1. Equipment Checklist
+## 1. Physical Capture Status & Execution Checklist
 
-- [ ] **Smartphone:** Modern smartphone with primary wide lens and optical image stabilization (OIS).
-- [ ] **Tape Measure & Painter's Tape:** For laying down a 1.00 m reference bar on the floor.
-- [ ] **Lens Cleaning Cloth:** Microfiber cloth to thoroughly wipe all camera lenses.
-- [ ] **Storage Space:** At least 5 GB of free phone storage.
+Before submitting Round 1, the operator must verify compliance with every step below:
+
+- [ ] **Physical Space Cleaned:** Personal documents, screens, mail, and family photos removed.
+- [ ] **Ambient Lighting Fixed:** Overhead ceiling lights ON; window blinds closed to avoid dynamic backlighting.
+- [ ] **1.00 m Floor Reference Placed:** Measured with a physical tape measure and marked with contrasting painter's tape on the floor.
+- [ ] **Camera Locked:** Standard 1x wide lens; 1080p or 4K at 30 FPS; **AE/AF Lock engaged**.
+- [ ] **Continuous Walkthrough Recorded:** Single slow continuous loop (~1.5–2.5 minutes) walking heel-to-toe at ~0.5 m/s.
+- [ ] **Floor Tape Filmed from Above:** Marked floor tape filmed clearly from multiple angles to enable 3D ground intersection in the scale picker.
+- [ ] **Loop Closure Completed:** Recording starts and finishes at the exact same location and orientation.
+- [ ] **Video Transferred to Colab:** Uploaded directly to Google Colab via Step 6 of `pipeline/vytrix_pipeline.ipynb`.
 
 ---
 
-## 2. Environment Preparation
+## 2. Equipment Checklist
+
+1. **Smartphone:** Standard smartphone with optical image stabilization (OIS) on primary wide camera (iPhone, Samsung, Pixel, OnePlus, etc.).
+2. **Physical Tape Measure & Painter's Tape:** For placing an exact $1.00\text{ m}$ reference marker on the floor.
+3. **Microfiber Cloth:** Clean all phone camera lenses thoroughly before recording.
+4. **Storage:** At least 3–5 GB of free phone storage.
+
+---
+
+## 3. Environment Preparation
 
 1. **Privacy & Security Audit (Mandatory):**
    - The reconstructed 3D web model will be hosted publicly for competition judges.
-   - **Remove or conceal:** Personal identification documents, credit cards, bank statements, computer screens displaying passwords or chats, personal family photographs, medication labels, and mail.
+   - **Remove or conceal:** Personal identification cards, credit cards, bank statements, computer screens displaying passwords or chats, personal family photographs, medication labels, and mail.
 2. **Lighting:**
    - Turn **ON** all ambient ceiling and floor lights.
    - Ensure uniform, diffuse illumination. Avoid strong direct sunlight creating harsh moving shadows.
-   - If large windows are present, capture on an overcast day or during dusk/evening with interior lights on.
+   - If large windows are present, capture on an overcast day or during dusk/evening with interior lights on and blinds drawn.
 3. **Doors & Pathways:**
    - Open all interior doors completely flat against the wall so doorways can be traversed seamlessly.
    - Secure or remove pets, and ensure no other individuals walk across the camera frame during capture.
@@ -34,7 +52,7 @@
 
 ---
 
-## 3. Camera Settings
+## 4. Camera Settings
 
 Configure your phone camera prior to tapping record:
 - **Orientation:** Landscape mode (horizontal).
@@ -45,40 +63,34 @@ Configure your phone camera prior to tapping record:
 
 ---
 
-## 4. Ground-Truth Scale Target (Metric Calibration)
+## 5. Ground-Truth Scale Target (Metric Calibration)
 
 To ensure the 3D model is metrically scaled in real-world metres ($1.00\text{ unit} = 1.00\text{ m}$):
-1. Use a measuring tape to measure exactly **$1.00\text{ metre}$** on a clear section of the floor.
+1. Use a physical measuring tape to measure exactly **$1.00\text{ metre}$** on a clear section of the floor.
 2. Place two contrasting strips of painter's tape on the floor marking the ends ($0.00\text{ m}$ and $1.00\text{ m}$).
-3. When recording, make sure the camera films this floor marker clearly from at least 3 angles during your walkthrough.
+3. When recording, make sure the camera films this floor marker clearly from above at multiple angles during your walkthrough.
 
 ---
 
-## 5. Movement and Recording Protocol
+## 6. Movement and Recording Protocol
 
 > **Core Rule:** Smooth, steady, continuous motion. Avoid quick spins, sudden jerks, or running. Walk like a human steady-cam at approximately $0.5\text{ m/s}$ (slow heel-to-toe steps).
 
 ### Step-by-Step Trajectory
 ```
-[Start at Room 1 Doorway] 
+[Start at Room Doorway] 
          │
          ▼
-[Perimeter Pass 1: Walk perimeter facing inward towards room center]
+[Perimeter Pass: Walk room boundary facing inward towards room center]
          │
          ▼
-[Perimeter Pass 2: Walk perimeter facing outward towards walls/corners]
+[Center Orbit: Slow 360° rotation from center of room]
          │
          ▼
-[Center Sweep: 360° slow orbit at center of room]
+[Scale Target Pass: Circle around 1.00m floor tape looking downward]
          │
          ▼
-[Doorway Transition: Pause 2 seconds, film both door jambs, step through]
-         │
-         ▼
-[Room 2 Trajectory: Repeat perimeter and center passes]
-         │
-         ▼
-[Loop Closure: Walk back through the doorway and finish at exact start position]
+[Loop Closure: Walk back and finish at exact start position]
 ```
 
 1. **Overlap Requirement (3-Ray Rule):** Every object and wall segment must be visible in at least **3 distinct camera positions** separated by roughly 15 to 30 degrees.
@@ -88,46 +100,47 @@ To ensure the 3D model is metrically scaled in real-world metres ($1.00\text{ un
 3. **Loop Closure:**
    - Always return to your starting position and film your initial view before stopping the recording. This enables COLMAP's loop detector to eliminate drift and warp.
 4. **Total Duration:**
-   - For 1 to 2 rooms (25–40 m²), a single continuous video of **2 to 3 minutes** is optimal (generating ~300–450 sharp frames after decimation).
+   - For 1 to 2 rooms (20–40 m²), a single continuous video of **1.5 to 2.5 minutes** is optimal (generating ~300–450 sharp frames after decimation).
 
 ---
 
-## 6. Capture Metadata File: `capture_meta.json`
+## 7. Capture Metadata Template: `capture_meta.json`
 
-Save this metadata file alongside your video before processing:
+Save this metadata template alongside your video before processing:
 
 ```json
 {
+  "dataset_status": "TODO(user: real_home_capture)",
   "scene_id": "home-01",
-  "capture_date": "2026-10-11",
+  "capture_date": "TODO(user: YYYY-MM-DD)",
   "operator": "VYTRO SQUAD",
   "device": {
-    "model": "Smartphone (Wide Camera)",
-    "resolution": "1920x1080",
+    "model": "TODO(user: e.g. iPhone 14 Pro)",
+    "resolution": "TODO(user: e.g. 1920x1080 or 3840x2160)",
     "fps": 30,
     "stabilization": "OIS",
     "lens": "1x Wide"
   },
   "environment": {
-    "num_rooms": 2,
-    "approx_area_sqm": 30,
+    "room_type": "TODO(user: e.g. Living Room)",
+    "approx_area_sqm": "TODO(user: e.g. 25)",
     "lighting": "Indoor ambient ceiling lights on, blinds closed"
   },
   "scale_ground_truth": {
     "type": "floor_tape_marker",
     "measured_distance_meters": 1.00,
-    "notes": "Two blue tape marks on living room floor"
+    "notes": "Two contrasting painter tape marks on floor"
   }
 }
 ```
 
 ---
 
-## 7. Quality Verification & Common Mistakes
+## 8. Quality Verification & Common Mistakes
 
 | Problem | Cause | How to Fix |
 |---|---|---|
 | **Blurry Gaussians / Smears** | Moving too fast or camera shake. | Walk slower ($0.5\text{ m/s}$), hold phone with two hands against chest, wipe lens. |
-| **Disconnected Rooms** | Rushing through doorways without looking back. | Pause in doorway, film both rooms from the threshold, ensure 70%+ visual overlap. |
+| **Disconnected Rooms** | Rushing through doorways without looking back. | Pause in doorway, film both rooms from threshold, ensure 70%+ visual overlap. |
 | **Floaters / Background Artifacts** | Mirrors or intense outdoor window backlight. | Pull curtains over windows, lock exposure (AE-Lock), avoid direct mirror reflections. |
 | **Unregistered Images in COLMAP** | Blank textureless walls. | Stick small colored tape markers on bare corners to provide feature keypoints. |

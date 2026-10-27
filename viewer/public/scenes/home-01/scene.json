@@ -19,7 +19,7 @@
       0.0, 0.0, 0.0, 1.0
     ],
     "scale_method": "two_point_tape",
-    "scale_error_pct": 1.1
+    "scale_error_pct": null
   },
   "bounds": {
     "min": [-4.5, 0.0, -5.0],
@@ -32,16 +32,16 @@
   "eye_height_m": 1.6,
   "capture": {
     "device": "Smartphone (Wide Camera, 4K/1080p 30fps)",
-    "date": "2026-10-10",
+    "date": null,
     "fps": 30,
-    "num_frames_used": 350
+    "num_frames_used": null
   },
   "metrics": {
-    "registered_images": 344,
-    "total_images": 350,
-    "reproj_error_px": 0.68,
-    "psnr": 30.2,
-    "ssim": 0.924
+    "registered_images": null,
+    "total_images": null,
+    "reproj_error_px": null,
+    "psnr": null,
+    "ssim": null
   },
   "collision_proxy": null,
   "navmesh": null,

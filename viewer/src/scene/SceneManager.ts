@@ -109,21 +109,31 @@ export class SceneManager {
 
     // Try loading actual Gaussian Splat file if accessible
     let splatLoaded = false;
+    let splatUrl = "";
     if (manifest.splat.file) {
-      const splatUrl = new URL(manifest.splat.file, new URL(scenePath, window.location.href)).href;
+      splatUrl = new URL(manifest.splat.file, new URL(scenePath, window.location.href)).href;
       try {
         splatLoaded = await this.tryLoadSplat(splatUrl, loading);
       } catch (e) {
-        console.warn("Gaussian Splat asset not found or failed to load. Falling back to procedural room.", e);
+        console.warn("Gaussian Splat asset not found or failed to load.", e);
         splatLoaded = false;
       }
     }
 
     if (!splatLoaded) {
-      // Build high-detail procedural digital twin placeholder
-      this.buildProceduralRoom(manifest.bounds);
-      loading.setProgress(100, "Procedural Digital Twin Ready", "Synthetic Room Active");
-      eventBus.emit("splats:loaded", 42500);
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (!isLocalhost) {
+        // Never silently fall back on deployed sites
+        const errorMsg = `Gaussian Splat asset (${manifest.splat.file || "unknown"}) failed to load. Check that scene.splat exists at ${splatUrl} and headers permit CORS.`;
+        loading.showError(errorMsg);
+        throw new Error(`[VYTRIX Deployment Error] ${errorMsg}`);
+      } else {
+        // On local development only, show clear placeholder notice
+        console.warn("Localhost notice: scene.splat missing or failed to load. Loading local wireframe room for developer testing.");
+        this.buildProceduralRoom(manifest.bounds);
+        loading.setProgress(100, "Local Dev Wireframe Ready", "Note: scene.splat not yet populated");
+        eventBus.emit("splats:loaded", 42500);
+      }
     }
 
     loading.hide();
@@ -171,8 +181,9 @@ export class SceneManager {
         }
       });
 
+      // Allow sufficient time for real multi-megabyte splat downloads (up to 45 seconds)
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Timeout loading splat scene after 4s")), 4000);
+        setTimeout(() => reject(new Error("Timeout loading splat scene after 45s")), 45000);
       });
 
       await Promise.race([loadPromise, timeoutPromise]);
@@ -180,7 +191,7 @@ export class SceneManager {
       eventBus.emit("splats:loaded", this.manifest?.splat.num_gaussians || 0);
       return true;
     } catch (err) {
-      console.warn("Failed or timed out loading 3D Gaussian Splat scene. Falling back to procedural room:", err);
+      console.warn("Failed or timed out loading 3D Gaussian Splat scene:", err);
       if (this.splatViewer) {
         try {
           this.splatViewer.dispose();

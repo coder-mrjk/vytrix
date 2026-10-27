@@ -11,6 +11,7 @@ export class ScalePicker {
   private line: THREE.Line | null = null;
   private panel: HTMLElement | null = null;
   private realDistanceM: number = 1.0;
+  private errorMessage: string | null = null;
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -81,7 +82,15 @@ export class ScalePicker {
     const target = new THREE.Vector3();
     const hit = raycaster.ray.intersectPlane(plane, target);
 
-    const hitPoint = hit || raycaster.ray.at(2.5, new THREE.Vector3());
+    // Reject click when gaze ray does not hit floor plane (looking horizontal or upward)
+    if (!hit || raycaster.ray.direction.y >= -1e-4) {
+      this.errorMessage = "Look down at the floor tape and click again";
+      this.updateUI();
+      return;
+    }
+
+    this.errorMessage = null;
+    const hitPoint = hit;
 
     if (!this.p1 || (this.p1 && this.p2)) {
       this.clearMarkers();
@@ -128,6 +137,7 @@ export class ScalePicker {
     }
     this.p1 = null;
     this.p2 = null;
+    this.errorMessage = null;
     this.updateUI();
   }
 
@@ -155,9 +165,14 @@ export class ScalePicker {
         <span style="color: #00f0ff; font-weight: 700;">SCALE CALIBRATION</span>
         <button id="scale-close-btn" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px;">✕</button>
       </div>
-      <div style="color: #94a3b8; font-size: 11px; margin-bottom: 8px;">
-        Aim crosshair at two points on a known object (e.g. 1m floor tape) and click.
+      <div style="color: #94a3b8; font-size: 11px; margin-bottom: 8px; line-height: 1.4;">
+        Look down from above at your 1-metre floor tape and click both endpoints. Clicks must intersect the canonical floor plane (Y = 0).
       </div>
+      ${this.errorMessage ? `
+        <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; padding: 6px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px; font-weight: 600;">
+          ⚠️ ${this.errorMessage}
+        </div>
+      ` : ""}
       <div style="margin-bottom: 4px;">P1: <span style="color: #00f0ff;">${p1Str}</span></div>
       <div style="margin-bottom: 8px;">P2: <span style="color: #3b82f6;">${p2Str}</span></div>
       ${this.p1 && this.p2 ? `

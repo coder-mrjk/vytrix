@@ -15,10 +15,10 @@ All official prototype URLs, code repositories, reproduction environments, and v
 | Deliverable Name | Description | Verified Public Access Link |
 |---|---|---|
 | **Code Repository** | Complete VYTRIX source code, TypeScript viewer, 6-stage Python pipeline, and unit tests. | [https://github.com/coder-mrjk/vytrix.git](https://github.com/coder-mrjk/vytrix.git) |
-| **Interactive 3D Web Viewer (PoC)** | Zero-install first-person 3D digital twin with WASD roaming, HUD telemetry, and 60 FPS performance. | [https://vytrix-viewer.pages.dev](https://vytrix-viewer.pages.dev) *(or local `http://localhost:3000`)* |
+| **Interactive 3D Web Viewer (PoC)** | Zero-install first-person 3D digital twin with WASD roaming and HUD telemetry. | `TODO(measured: Deployed Cloudflare Pages URL)` *(or local `http://localhost:3000`)* |
 | **Google Colab Driver Notebook** | 1-Click cloud GPU pipeline running on a free Colab T4 GPU to reproduce 3D reconstruction from video. | [Open in Google Colab](https://colab.research.google.com/github/coder-mrjk/vytrix/blob/main/pipeline/vytrix_pipeline.ipynb) |
-| **Demonstration Video** | 3m 45s narrated video demonstrating capture SOP, Colab pipeline, and live 3D web roaming walkthrough. | [YouTube / Drive Video Link](https://youtu.be/vytrix-demo-video) |
-| **Technical Abstract (PDF)** | 5-page formal engineering abstract detailing architecture, metrology math, and benchmark results. | [`docs/TECHNICAL_ABSTRACT.md`](file:///Users/karthi/vytrix/docs/TECHNICAL_ABSTRACT.md) |
+| **Demonstration Video** | 3 to 5-minute narrated video demonstrating capture SOP, Colab pipeline, and live 3D web roaming walkthrough. | `TODO(measured: YouTube Unlisted / Google Drive Video Link)` |
+| **Technical Abstract (PDF)** | 5-page formal engineering abstract detailing architecture, metrology math, and benchmark results. | [`docs/TECHNICAL_ABSTRACT.md`](TECHNICAL_ABSTRACT.md) |
 
 ---
 
@@ -27,7 +27,7 @@ All official prototype URLs, code repositories, reproduction environments, and v
 Judges can inspect and reproduce VYTRIX using either of two zero-friction paths:
 
 ### Path A: Zero-Install Instant Web Exploration (10 Seconds)
-1. Open the [Interactive 3D Web Viewer](https://vytrix-viewer.pages.dev) in Google Chrome, Microsoft Edge, or Safari on desktop or mobile.
+1. Open the Interactive 3D Web Viewer at `http://localhost:3000` (or the deployed Cloudflare Pages URL) in Google Chrome, Microsoft Edge, or Safari.
 2. Click **"Enter Space"** to engage first-person roaming.
 3. Use **W/A/S/D** to walk, mouse to look around, **Shift** to sprint, **F** to toggle free-flight inspection mode, and **R** to reset camera.
 4. Observe the HUD in the top-right corner displaying real-time FPS, eye height ($1.6\text{ m}$), coordinates, and active 3D Gaussian count.
